@@ -92,7 +92,7 @@ const dayStartHour = 9;
 const dayEndHour = 22;
 const ganttHours = Array.from({ length: dayEndHour - dayStartHour }, (_, i) => dayStartHour + i);
 const ganttTotalMinutes = (dayEndHour - dayStartHour) * 60;
-const ganttNowUpdateIntervalMs = 30000;
+const ganttNowUpdateIntervalMs = 60000;
 const storedToken = localStorage.getItem('authToken');
 let authToken = storedToken || '';
 let autoRefreshTimer = null;
