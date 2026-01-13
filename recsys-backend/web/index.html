@@ -75,6 +75,15 @@
           </div>
           <div class="table" id="upcoming-tasks"></div>
         </div>
+        <div class="card">
+          <div class="card__header">
+            <h2>Сущности рабочего пространства</h2>
+          </div>
+          <p class="card__subtitle">
+            Быстрый обзор ключевых таблиц: оборудование, операторы, задания и справочники.
+          </p>
+          <div class="entity-summary" id="entity-summary"></div>
+        </div>
       </div>
 
       <section class="card">
@@ -152,6 +161,7 @@
           <div class="card__header">
             <h2>Характеристики оборудования</h2>
           </div>
+          <p class="card__subtitle">Характеристики связываются с типами устройств в рабочем пространстве.</p>
           <form class="inline-form" id="equipment-characteristic-form">
             <label>
               Название
@@ -165,6 +175,7 @@
           <div class="card__header">
             <h2>Типы оборудования</h2>
           </div>
+          <p class="card__subtitle">Каждый тип связан с характеристикой и определяет набор устройств.</p>
           <form class="inline-form" id="device-type-form">
             <label>
               Название
@@ -182,6 +193,7 @@
           <div class="card__header">
             <h2>Типы заданий</h2>
           </div>
+          <p class="card__subtitle">Типы используются при создании производственных заданий.</p>
           <form class="inline-form" id="task-type-form">
             <label>
               Название
@@ -190,6 +202,18 @@
             <button class="button" type="submit">Добавить</button>
           </form>
           <div class="table table--wide" id="task-types-list"></div>
+        </div>
+        <div class="card">
+          <div class="card__header">
+            <h2>Карта связей данных</h2>
+          </div>
+          <ul class="data-map">
+            <li><strong>Workspace</strong> → характеристики → типы оборудования → устройства → задания.</li>
+            <li><strong>Операторы</strong> → компетенции по типам оборудования → задачи и смены.</li>
+            <li><strong>Приоритеты</strong> и <strong>типы заданий</strong> задают правила планирования.</li>
+            <li><strong>User tasks</strong> фиксируют персональные поручения в рамках выбранного задания.</li>
+          </ul>
+          <p class="muted">Эти связи повторяют структуру БД и помогают быстрее находить нужные сущности.</p>
         </div>
       </div>
     </section>
@@ -275,6 +299,7 @@
         Название
         <input name="name" type="text" required />
       </label>
+      <span class="helper-text">Рабочее пространство привязывает пользователей, оборудование и задания.</span>
       <label>
         Логин пользователя
         <input name="user_login" type="text" pattern="[A-Za-z0-9._-]{3,}" required />
@@ -300,6 +325,7 @@
           Номер документа
           <input name="doc_num" type="text" placeholder="DOC-0001" pattern="DOC-\\d{4}" required />
         </label>
+        <span class="helper-text">Документы связывают задания с планами производства.</span>
         <label>
           Фото модели (URL)
           <input name="photo_url" type="url" placeholder="https://" required />
@@ -316,6 +342,7 @@
           Тип задания
           <select name="device_task_type_id" id="task-type" required></select>
         </label>
+        <span class="helper-text">Оператор, тип задания и оборудование связаны через таблицы БД.</span>
         <label>
           Приоритет
           <select name="priority_id" id="task-priority" required></select>
@@ -336,6 +363,7 @@
           Время на снятие изделия, мин
           <input name="unload_time_min" type="number" min="0" step="1" required />
         </label>
+        <span class="helper-text">Временные параметры используются при расчёте расписания.</span>
         <label>
           Плановое время начала
           <input name="plan_start" type="datetime-local" />
@@ -408,6 +436,7 @@
           Состояние
           <select name="device_state_id" id="device-state" required></select>
         </label>
+        <span class="helper-text">Состояние влияет на рекомендации и загрузку.</span>
       </div>
       <label class="checkbox">
         <input type="checkbox" name="add_in_rec_system" checked />
