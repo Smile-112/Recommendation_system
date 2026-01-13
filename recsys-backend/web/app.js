@@ -42,6 +42,7 @@ const equipmentCharacteristicsList = document.getElementById('equipment-characte
 const deviceTypesList = document.getElementById('device-types-list');
 const taskTypesList = document.getElementById('task-types-list');
 const equipmentCharacteristicSelect = document.getElementById('equipment-characteristic-select');
+const toastContainer = document.getElementById('toast-container');
 
 const workspaceModal = document.getElementById('workspace-modal');
 const taskModal = document.getElementById('task-modal');
@@ -96,6 +97,7 @@ let authToken = storedToken || '';
 let autoRefreshTimer = null;
 let ganttDragState = null;
 let suppressGanttClick = false;
+let pendingOverlapCheck = false;
 
 async function fetchJSON(url, options) {
   const headers = new Headers(options?.headers || {});
@@ -169,9 +171,9 @@ function formatPhoneInput(value) {
 }
 
 function formatDocNumber(value, pad = false) {
-  const digits = value.replace(/\D/g, '').slice(0, 4);
+  const digits = value.replace(/\D/g, '').slice(0, 6);
   if (!digits) return '';
-  const padded = pad ? digits.padStart(4, '0') : digits;
+  const padded = pad ? digits.padStart(3, '0') : digits;
   return `DOC-${padded}`;
 }
 
@@ -215,6 +217,34 @@ function mapById(items) {
     acc[item.id] = item;
     return acc;
   }, {});
+}
+
+function showToast(message, variant = 'info') {
+  if (!toastContainer) {
+    alert(message);
+    return;
+  }
+  const toast = document.createElement('div');
+  toast.className = `toast toast--${variant}`;
+  toast.textContent = message;
+  toastContainer.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.classList.add('is-visible');
+  });
+  setTimeout(() => {
+    toast.classList.remove('is-visible');
+    toast.addEventListener(
+      'transitionend',
+      () => {
+        toast.remove();
+      },
+      { once: true }
+    );
+  }, 5000);
+}
+
+function showSaveToast(label = 'Изменения') {
+  showToast(`${label} сохранены.`, 'info');
 }
 
 function resetWorkspaceState() {
@@ -357,6 +387,10 @@ async function loadWorkspaceData() {
   state.operatorCompetencies = operatorCompetencies;
   state.userTasks = userTasks;
   renderAll();
+  if (pendingOverlapCheck) {
+    notifyAllTaskBreakOverlaps();
+    pendingOverlapCheck = false;
+  }
 }
 
 function getTasksForDate(date) {
@@ -473,6 +507,7 @@ function buildGantt(container, tasks, labelFormatter) {
       }
       if (task._userTaskId) {
         bar.dataset.userTaskId = task._userTaskId;
+        bar.classList.add('is-draggable');
       }
       track.appendChild(bar);
     }
@@ -504,6 +539,19 @@ function buildTaskPayload(task, overrides) {
   };
 }
 
+function buildUserTaskPayload(userTask, overrides) {
+  return {
+    name: userTask.name,
+    start_time: userTask.start_time ? new Date(userTask.start_time) : null,
+    end_time: userTask.end_time ? new Date(userTask.end_time) : null,
+    priority: userTask.priority ?? null,
+    completion_mark: userTask.completion_mark ?? null,
+    device_task_id: userTask.device_task_id ?? null,
+    operator_id: Number(userTask.operator_id || 0),
+    ...overrides
+  };
+}
+
 function hasDeviceOverlap(taskId, deviceId, start, end) {
   return state.tasks.some((task) => {
     if (task.id === taskId) return false;
@@ -525,16 +573,45 @@ async function updateTaskSchedule(task, newStart, newEnd) {
     body: JSON.stringify(payload)
   });
   await loadWorkspaceData();
+  notifyTaskBreakOverlap(task, newStart, newEnd);
+  return true;
+}
+
+async function updateUserTaskSchedule(userTask, newStart, newEnd) {
+  const workspaceId = getWorkspaceId();
+  if (!workspaceId) return false;
+  const payload = buildUserTaskPayload(userTask, { start_time: newStart, end_time: newEnd });
+  await fetchJSON(`${apiBase}/user-tasks/${userTask.id}?workspace_id=${workspaceId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  await loadWorkspaceData();
   return true;
 }
 
 function startGanttDrag(event) {
   const bar = event.target.closest('.gantt__bar');
-  if (!bar?.dataset.taskId) return;
-  const task = state.tasks.find((item) => item.id === Number(bar.dataset.taskId));
-  if (!task?.plan_start || !task?.plan_end) return;
-  const startValue = new Date(task.plan_start);
-  const endValue = new Date(task.plan_end);
+  if (!bar) return;
+  const taskId = bar.dataset.taskId;
+  const userTaskId = bar.dataset.userTaskId;
+  if (!taskId && !userTaskId) return;
+  let task = null;
+  let startValue = null;
+  let endValue = null;
+  let isUserTask = false;
+  if (userTaskId) {
+    task = state.userTasks.find((item) => item.id === Number(userTaskId));
+    if (!task?.start_time || !task?.end_time) return;
+    startValue = new Date(task.start_time);
+    endValue = new Date(task.end_time);
+    isUserTask = true;
+  } else {
+    task = state.tasks.find((item) => item.id === Number(taskId));
+    if (!task?.plan_start || !task?.plan_end) return;
+    startValue = new Date(task.plan_start);
+    endValue = new Date(task.plan_end);
+  }
   const startMinutes = getMinutesFromDayStart(startValue);
   const endMinutes = getMinutesFromDayStart(endValue);
   if (startMinutes === null || endMinutes === null) return;
@@ -551,7 +628,8 @@ function startGanttDrag(event) {
     newStartMinutes: startMinutes,
     originalLeft: bar.style.left,
     pointerId: event.pointerId,
-    moved: false
+    moved: false,
+    isUserTask
   };
   bar.classList.add('is-dragging');
   bar.setPointerCapture(event.pointerId);
@@ -583,7 +661,8 @@ async function endGanttDrag() {
     newStartMinutes,
     originalLeft,
     moved,
-    pointerId
+    pointerId,
+    isUserTask
   } = ganttDragState;
   ganttDragState = null;
   bar.classList.remove('is-dragging');
@@ -596,15 +675,20 @@ async function endGanttDrag() {
     suppressGanttClick = false;
   }, 0);
   const roundedStartMinutes = Math.round(newStartMinutes);
-  const newStart = buildDateFromMinutes(new Date(task.plan_start), roundedStartMinutes);
+  const baseDate = new Date(isUserTask ? task.start_time : task.plan_start);
+  const newStart = buildDateFromMinutes(baseDate, roundedStartMinutes);
   const newEnd = new Date(newStart.getTime() + durationMinutes * 60000);
-  if (hasDeviceOverlap(task.id, task.device_id, newStart, newEnd)) {
-    alert('Нельзя пересекать задания на одном принтере.');
-    bar.style.left = originalLeft;
-    return;
-  }
   try {
-    await updateTaskSchedule(task, newStart, newEnd);
+    if (!isUserTask) {
+      if (hasDeviceOverlap(task.id, task.device_id, newStart, newEnd)) {
+        alert('Нельзя пересекать задания на одном принтере.');
+        bar.style.left = originalLeft;
+        return;
+      }
+      await updateTaskSchedule(task, newStart, newEnd);
+    } else {
+      await updateUserTaskSchedule(task, newStart, newEnd);
+    }
   } catch (error) {
     console.error(error);
     alert('Не удалось обновить время задачи.');
@@ -750,7 +834,7 @@ function renderHomeGantt() {
     const operator = state.operators.find((item) => item.id === task.operator_id);
     const taskType = state.taskTypes.find((item) => item.id === task.device_task_type_id);
     return `
-      ${task.name}
+      <span class="gantt__label-title">${task.name}</span>
       <small>${operator ? operator.full_name : 'Оператор не назначен'} · ${
       taskType ? taskType.name : 'Тип не указан'
     }</small>
@@ -899,7 +983,7 @@ function buildOperatorsGantt(container, tasksByOperator) {
     const label = document.createElement('div');
     label.className = 'gantt__label';
     label.innerHTML = `
-      ${row.operator.full_name}
+      <span class="gantt__label-title">${row.operator.full_name}</span>
       <small>${row.tasks.length + row.userTasks.length} задач(и)</small>
     `;
 
@@ -938,8 +1022,13 @@ function buildOperatorsGantt(container, tasksByOperator) {
       bar.title = `${formatTime(startValue)} – ${formatTime(endValue)} · ${getStatusLabel(
         status
       )}`;
+      if (task.id) {
+        bar.dataset.taskId = task.id;
+        bar.classList.add('is-draggable');
+      }
       if (task._userTaskId) {
         bar.dataset.userTaskId = task._userTaskId;
+        bar.classList.add('is-draggable');
       }
       track.appendChild(bar);
     });
@@ -1029,10 +1118,18 @@ function renderTasksPage() {
     const operator = state.operators.find((item) => item.id === task.operator_id);
     const device = state.devices.find((item) => item.id === task.device_id);
     const taskType = state.taskTypes.find((item) => item.id === task.device_task_type_id);
+    const mainLabel =
+      sortMode === 'device'
+        ? `<span class="gantt__label-text">${task.name}</span>`
+        : `<span class="gantt__label-title">${task.name}</span>`;
+    const deviceLabel =
+      sortMode === 'device'
+        ? `<span class="gantt__label-title">${device ? device.name : 'Оборудование не выбрано'}</span>`
+        : `${device ? device.name : 'Оборудование не выбрано'}`;
     return `
-      ${task.name}
+      ${mainLabel}
       <small>${operator ? operator.full_name : 'Оператор не назначен'} · ${
-      device ? device.name : 'Оборудование не выбрано'
+      deviceLabel
     } · ${taskType ? taskType.name : 'Тип не указан'}</small>
     `;
   });
@@ -1048,7 +1145,7 @@ function renderReferenceTables() {
     const header = `
       <div class="table__row">
         <strong>Название</strong>
-        <strong>Workspace</strong>
+        <strong class="table__cell--center">Workspace</strong>
         <strong>Действия</strong>
       </div>
     `;
@@ -1057,7 +1154,7 @@ function renderReferenceTables() {
         (item) => `
         <div class="table__row">
           <div><strong>${item.name}</strong><br /><span class="muted">#${item.id}</span></div>
-          <div>${item.workspace_id || '—'}</div>
+          <div class="table__cell--center">${item.workspace_id || '—'}</div>
           <div class="table__actions">
             <button class="button button--ghost" data-delete-equipment-characteristic="${
               item.id
@@ -1102,7 +1199,7 @@ function renderReferenceTables() {
     const header = `
       <div class="table__row">
         <strong>Название</strong>
-        <strong>Workspace</strong>
+        <strong class="table__cell--center">Workspace</strong>
         <strong>Действия</strong>
       </div>
     `;
@@ -1111,7 +1208,7 @@ function renderReferenceTables() {
         (item) => `
         <div class="table__row">
           <div><strong>${item.name}</strong><br /><span class="muted">#${item.id}</span></div>
-          <div>${item.workspace_id || '—'}</div>
+          <div class="table__cell--center">${item.workspace_id || '—'}</div>
           <div class="table__actions">
             <button class="button button--ghost" data-delete-task-type="${item.id}" type="button">Удалить</button>
           </div>
@@ -1139,7 +1236,44 @@ function renderAll() {
 function getUserTaskStatus(task) {
   const name = (task.name || '').toLowerCase();
   if (name.includes('обед')) return 'lunch';
+  if (name.includes('не работает')) return 'off';
   return 'off';
+}
+
+function isBreakUserTask(task) {
+  const name = (task.name || '').toLowerCase();
+  return name.includes('обед') || name.includes('не работает');
+}
+
+function findBreakOverlap(task, startTime, endTime) {
+  if (!task?.operator_id || !startTime || !endTime) return null;
+  const overlaps = state.userTasks.filter((userTask) => {
+    if (userTask.operator_id !== task.operator_id) return false;
+    if (!isBreakUserTask(userTask)) return false;
+    if (!userTask.start_time || !userTask.end_time) return false;
+    const breakStart = new Date(userTask.start_time);
+    const breakEnd = new Date(userTask.end_time);
+    return startTime < breakEnd && endTime > breakStart;
+  });
+  return overlaps.length ? overlaps : null;
+}
+
+function notifyTaskBreakOverlap(task, startTime, endTime) {
+  const overlaps = findBreakOverlap(task, startTime, endTime);
+  if (!overlaps) return;
+  const operator = state.operators.find((item) => item.id === task.operator_id);
+  const operatorName = operator?.full_name || `Оператор #${task.operator_id}`;
+  showToast(
+    `Задача «${task.name}» оператора ${operatorName} пересекается с его перерывом.`,
+    'warning'
+  );
+}
+
+function notifyAllTaskBreakOverlaps() {
+  state.tasks.forEach((task) => {
+    if (!task.plan_start || !task.plan_end) return;
+    notifyTaskBreakOverlap(task, new Date(task.plan_start), new Date(task.plan_end));
+  });
 }
 
 function resetTaskForm() {
@@ -1467,14 +1601,22 @@ async function createTask(event) {
     ? `${apiBase}/device-tasks/${taskForm.dataset.taskId}?workspace_id=${workspaceId}`
     : `${apiBase}/workspaces/${workspaceId}/device-tasks`;
   const method = isEdit ? 'PUT' : 'POST';
-  await fetchJSON(url, {
+  const result = await fetchJSON(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
+  const taskId = isEdit ? Number(taskForm.dataset.taskId) : result?.id;
   closeModal(taskModal);
   resetTaskForm();
   await loadWorkspaceData();
+  const updatedTask = state.tasks.find((item) => item.id === taskId);
+  if (updatedTask?.plan_start && updatedTask?.plan_end) {
+    notifyTaskBreakOverlap(updatedTask, new Date(updatedTask.plan_start), new Date(updatedTask.plan_end));
+  }
+  if (isEdit) {
+    showSaveToast('Задание');
+  }
 }
 
 async function createOperator(event) {
@@ -1497,6 +1639,9 @@ async function createOperator(event) {
   closeModal(operatorModal);
   resetOperatorForm();
   await loadWorkspaceData();
+  if (isEdit) {
+    showSaveToast('Оператор');
+  }
 }
 
 async function createDevice(event) {
@@ -1522,6 +1667,9 @@ async function createDevice(event) {
   closeModal(deviceModal);
   resetDeviceForm();
   await loadWorkspaceData();
+  if (isEdit) {
+    showSaveToast('Оборудование');
+  }
 }
 
 async function createScheduleEntry(event) {
@@ -1532,7 +1680,14 @@ async function createScheduleEntry(event) {
   const formData = new FormData(scheduleForm);
   const payload = Object.fromEntries(formData.entries());
   payload.operator_id = Number(payload.operator_id || 0);
-  payload.device_task_id = null;
+  if (scheduleForm.dataset.mode === 'edit') {
+    const existingTask = state.userTasks.find(
+      (item) => item.id === Number(scheduleForm.dataset.userTaskId)
+    );
+    payload.device_task_id = existingTask?.device_task_id ?? null;
+  } else {
+    payload.device_task_id = null;
+  }
   payload.start_time = parseDateTimeInput(payload.start_time);
   payload.end_time = parseDateTimeInput(payload.end_time);
   payload.name = payload.schedule_type === 'lunch' ? 'Обед' : 'Не работает';
@@ -1554,6 +1709,9 @@ async function createScheduleEntry(event) {
   closeModal(scheduleModal);
   resetScheduleForm();
   await loadWorkspaceData();
+  if (isEdit) {
+    showSaveToast('Перерыв');
+  }
 }
 
 async function createDeviceType(event) {
@@ -1667,6 +1825,7 @@ async function recomputePlan() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ workspace_id: workspaceId })
   });
+  pendingOverlapCheck = true;
   await loadWorkspaceData();
 }
 
@@ -1815,7 +1974,18 @@ tasksGantt?.addEventListener('click', (event) => {
   openTaskEditor(bar.dataset.taskId);
 });
 
+homeGantt?.addEventListener('click', (event) => {
+  if (suppressGanttClick) return;
+  const bar = event.target.closest('.gantt__bar');
+  if (!bar?.dataset.taskId) return;
+  setActivePage('tasks');
+  tasksDateInput.value = toLocalInputValue(new Date());
+  renderTasksPage();
+  openTaskEditor(bar.dataset.taskId);
+});
+
 operatorsGantt?.addEventListener('click', (event) => {
+  if (suppressGanttClick) return;
   const bar = event.target.closest('.gantt__bar');
   if (!bar?.dataset.userTaskId) return;
   openScheduleEditor(bar.dataset.userTaskId);
@@ -1849,6 +2019,7 @@ operatorsGantt?.addEventListener('mouseover', (event) =>
 operatorsGantt?.addEventListener('mouseout', () => clearLegendHover(operatorsGanttLegend));
 homeGantt?.addEventListener('pointerdown', startGanttDrag);
 tasksGantt?.addEventListener('pointerdown', startGanttDrag);
+operatorsGantt?.addEventListener('pointerdown', startGanttDrag);
 document.addEventListener('pointermove', moveGanttDrag);
 document.addEventListener('pointerup', endGanttDrag);
 
