@@ -1309,7 +1309,7 @@ function fillTaskForm(task) {
   taskForm.dataset.taskId = task.id;
   if (taskModalTitle) taskModalTitle.textContent = 'Редактировать задание';
   taskForm.elements.name.value = task.name || '';
-  taskForm.elements.doc_num.value = task.doc_num || '';
+  taskForm.elements.doc_num.value = formatDocNumber(task.doc_num || '', true);
   taskForm.elements.photo_url.value = task.photo_url || '';
   taskForm.elements.deadline.value = task.deadline ? toLocalDateTimeValue(new Date(task.deadline)) : '';
   taskForm.elements.operator_id.value = task.operator_id || '';
@@ -1580,6 +1580,7 @@ async function createTask(event) {
   if (!taskForm.reportValidity()) return;
   const formData = new FormData(taskForm);
   const payload = Object.fromEntries(formData.entries());
+  payload.doc_num = formatDocNumber(payload.doc_num || '', true);
   payload.duration_min = Number(payload.duration_min || 0);
   payload.setup_time_min = Number(payload.setup_time_min || 0);
   payload.unload_time_min = Number(payload.unload_time_min || 0);

@@ -365,7 +365,7 @@
   </dialog>
 
   <dialog class="modal" id="task-modal">
-    <form method="dialog" class="modal__content" id="task-form" data-mode="create">
+    <form class="modal__content" id="task-form" data-mode="create">
       <div class="modal__header">
         <h3 id="task-modal-title">Новое задание</h3>
         <button class="icon-button" type="button" data-close>✕</button>
@@ -377,7 +377,7 @@
         </label>
         <label>
           Номер документа
-          <input name="doc_num" type="text" placeholder="DOC-000" pattern="DOC-\\d{3,6}" required />
+          <input name="doc_num" type="text" placeholder="DOC-000" pattern="DOC-\d{1,6}" required />
         </label>
         <span class="helper-text">Документы связывают задания с планами производства.</span>
         <label>
