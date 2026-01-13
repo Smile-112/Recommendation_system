@@ -25,6 +25,13 @@ func NewRouter(h *Handlers) http.Handler {
 	r.Get("/health", h.Health)
 
 	r.Route("/api", func(api chi.Router) {
+		api.Route("/auth", func(r chi.Router) {
+			r.Post("/register", h.Register)
+			r.Post("/login", h.Login)
+			r.Post("/logout", h.Logout)
+			r.Get("/me", h.Me)
+		})
+
 		api.Route("/users", func(r chi.Router) {
 			r.Get("/", h.ListUsers)
 			r.Post("/", h.CreateUser)

@@ -12,7 +12,8 @@ CREATE TABLE "user" (
   "user_login" TEXT PRIMARY KEY,
   "user_id" INTEGER NOT NULL,
   "user_password" TEXT NOT NULL,
-  "user_email" TEXT NOT NULL
+  "user_email" TEXT NOT NULL,
+  "is_admin" BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE "workspace" (

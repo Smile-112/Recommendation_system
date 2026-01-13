@@ -18,6 +18,10 @@
       </div>
       <div class="header-status">
         <span id="api-status" class="pill">API: неизвестно</span>
+        <div class="user-bar">
+          <span id="user-greeting" class="muted">Гость</span>
+          <button class="button button--ghost" id="auth-action" type="button">Войти</button>
+        </div>
       </div>
     </div>
     <div class="app-header__row app-header__row--nav">
@@ -27,7 +31,9 @@
         <button class="nav__link" data-page="equipment">Оборудование</button>
         <button class="nav__link" data-page="operators">Операторы</button>
         <button class="nav__link" data-page="schedules">Графики работы</button>
+        <button class="nav__link" data-page="references">Справочники</button>
         <button class="nav__link" data-page="halomeny">Halomeny</button>
+        <button class="nav__link" data-page="profile">Профиль</button>
       </nav>
       <div class="workspace-bar">
         <label for="workspace-select">Рабочее пространство</label>
@@ -127,6 +133,41 @@
       </div>
     </section>
 
+    <section class="page" data-page="references">
+      <div class="layout-grid">
+        <div class="card">
+          <div class="card__header">
+            <h2>Типы оборудования</h2>
+          </div>
+          <form class="inline-form" id="device-type-form">
+            <label>
+              Название
+              <input name="name" type="text" required />
+            </label>
+            <label>
+              Характеристика
+              <select name="equipment_characteristic_id" id="equipment-characteristic-select" required></select>
+            </label>
+            <button class="button" type="submit">Добавить</button>
+          </form>
+          <div class="table table--wide" id="device-types-list"></div>
+        </div>
+        <div class="card">
+          <div class="card__header">
+            <h2>Типы заданий</h2>
+          </div>
+          <form class="inline-form" id="task-type-form">
+            <label>
+              Название
+              <input name="name" type="text" required />
+            </label>
+            <button class="button" type="submit">Добавить</button>
+          </form>
+          <div class="table table--wide" id="task-types-list"></div>
+        </div>
+      </div>
+    </section>
+
     <section class="page" data-page="halomeny">
       <div class="card">
         <h2>О системе</h2>
@@ -137,6 +178,63 @@
         <p class="muted">
           Интерфейс синхронизирован с базой данных через API и отражает текущее состояние работы.
         </p>
+      </div>
+    </section>
+
+    <section class="page" data-page="profile">
+      <div class="layout-grid">
+        <div class="card">
+          <div class="card__header">
+            <h2>Личный кабинет</h2>
+            <button class="button button--ghost" id="logout-button" type="button">Выйти</button>
+          </div>
+          <div id="profile-summary" class="profile-summary">
+            <p class="muted">Войдите, чтобы увидеть данные профиля.</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card__header">
+            <h2>Вход</h2>
+          </div>
+          <form class="form-grid" id="login-form">
+            <label>
+              Логин
+              <input name="login" type="text" autocomplete="username" pattern="[A-Za-z0-9._-]{3,}" required />
+            </label>
+            <label>
+              Пароль
+              <input name="password" type="password" autocomplete="current-password" required />
+            </label>
+            <button class="button" type="submit">Войти</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card__header">
+            <h2>Регистрация</h2>
+          </div>
+          <form class="form-grid" id="register-form">
+            <label>
+              Логин
+              <input name="login" type="text" autocomplete="username" pattern="[A-Za-z0-9._-]{3,}" required />
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" autocomplete="email" required />
+            </label>
+            <label>
+              Пароль
+              <input name="password" type="password" autocomplete="new-password" minlength="6" required />
+            </label>
+            <button class="button" type="submit">Создать аккаунт</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card" id="admin-panel">
+        <div class="card__header">
+          <h2>Администрирование пользователей</h2>
+        </div>
+        <div class="table table--wide" id="users-list"></div>
       </div>
     </section>
   </main>
@@ -153,7 +251,7 @@
       </label>
       <label>
         Логин пользователя
-        <input name="user_login" type="text" required />
+        <input name="user_login" type="text" pattern="[A-Za-z0-9._-]{3,}" required />
       </label>
       <div class="modal__actions">
         <button class="button" type="submit">Сохранить</button>
@@ -174,11 +272,11 @@
         </label>
         <label>
           Номер документа
-          <input name="doc_num" type="text" required />
+          <input name="doc_num" type="text" placeholder="DOC-0001" pattern="DOC-\\d{4}" required />
         </label>
         <label>
           Фото модели (URL)
-          <input name="photo_url" type="text" placeholder="https://" required />
+          <input name="photo_url" type="url" placeholder="https://" required />
         </label>
         <label>
           Срок реализации
@@ -202,15 +300,15 @@
         </label>
         <label>
           Время выполнения, мин
-          <input name="duration_min" type="number" min="0" required />
+          <input name="duration_min" type="number" min="0" step="1" required />
         </label>
         <label>
           Время на настройку, мин
-          <input name="setup_time_min" type="number" min="0" required />
+          <input name="setup_time_min" type="number" min="0" step="1" required />
         </label>
         <label>
           Время на снятие изделия, мин
-          <input name="unload_time_min" type="number" min="0" required />
+          <input name="unload_time_min" type="number" min="0" step="1" required />
         </label>
         <label>
           Плановое время начала
@@ -248,11 +346,11 @@
         </label>
         <label>
           Номер телефона
-          <input name="phone_number" type="text" placeholder="+7 (___) ___-__-__" required />
+          <input name="phone_number" type="tel" inputmode="tel" placeholder="+7 (___) ___-__-__" pattern="\\+7 \\(\\d{3}\\) \\d{3}-\\d{2}-\\d{2}" required />
         </label>
         <label>
           Логин пользователя
-          <input name="user_login" type="text" required />
+          <input name="user_login" type="text" pattern="[A-Za-z0-9._-]{3,}" required />
         </label>
       </div>
       <div class="modal__actions">
@@ -274,7 +372,7 @@
         </label>
         <label>
           Фото устройства (URL)
-          <input name="photo_url" type="text" placeholder="https://" required />
+          <input name="photo_url" type="url" placeholder="https://" required />
         </label>
         <label>
           Тип устройства

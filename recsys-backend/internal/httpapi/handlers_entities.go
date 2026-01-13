@@ -22,6 +22,7 @@ type UserRequest struct {
 	ID       int64  `json:"id"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	IsAdmin  bool   `json:"is_admin"`
 }
 
 type WorkspaceRequest struct {
@@ -129,6 +130,9 @@ func minutesToDuration(minutes int) time.Duration {
 // @Failure     500  {object}  map[string]any
 // @Router      /api/users [get]
 func (h *Handlers) ListUsers(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.requireAdmin(w, r); !ok {
+		return
+	}
 	users, err := h.repos.ListUsers(r.Context())
 	if err != nil {
 		writeJSON(w, 500, map[string]any{"error": err.Error()})
@@ -147,6 +151,9 @@ func (h *Handlers) ListUsers(w http.ResponseWriter, r *http.Request) {
 // @Failure     500    {object}  map[string]any
 // @Router      /api/users/{login} [get]
 func (h *Handlers) GetUser(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.requireAdmin(w, r); !ok {
+		return
+	}
 	login := chi.URLParam(r, "login")
 	if strings.TrimSpace(login) == "" {
 		writeJSON(w, 400, map[string]any{"error": "login required"})
@@ -171,6 +178,9 @@ func (h *Handlers) GetUser(w http.ResponseWriter, r *http.Request) {
 // @Failure     500   {object}  map[string]any
 // @Router      /api/users [post]
 func (h *Handlers) CreateUser(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.requireAdmin(w, r); !ok {
+		return
+	}
 	var req UserRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeJSON(w, 400, map[string]any{"error": "bad json"})
@@ -180,15 +190,24 @@ func (h *Handlers) CreateUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]any{"error": "login, password, email required"})
 		return
 	}
+	if req.ID == 0 {
+		nextID, err := h.repos.NextUserID(r.Context())
+		if err != nil {
+			writeJSON(w, 500, map[string]any{"error": err.Error()})
+			return
+		}
+		req.ID = nextID
+	}
 	passwordHash, err := hashPassword(req.Password)
 	if err != nil {
 		writeJSON(w, 500, map[string]any{"error": err.Error()})
 		return
 	}
 	id, err := h.repos.CreateUser(r.Context(), storage.User{
-		Login: req.Login,
-		ID:    req.ID,
-		Email: req.Email,
+		Login:   req.Login,
+		ID:      req.ID,
+		Email:   req.Email,
+		IsAdmin: req.IsAdmin,
 	}, passwordHash)
 	if err != nil {
 		writeJSON(w, 500, map[string]any{"error": err.Error()})
@@ -209,6 +228,9 @@ func (h *Handlers) CreateUser(w http.ResponseWriter, r *http.Request) {
 // @Failure     500    {object}  map[string]any
 // @Router      /api/users/{login} [put]
 func (h *Handlers) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.requireAdmin(w, r); !ok {
+		return
+	}
 	login := chi.URLParam(r, "login")
 	if login == "" {
 		writeJSON(w, 400, map[string]any{"error": "login required"})
@@ -229,9 +251,10 @@ func (h *Handlers) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		passwordHash = &hash
 	}
 	if err := h.repos.UpdateUser(r.Context(), storage.User{
-		Login: login,
-		ID:    req.ID,
-		Email: req.Email,
+		Login:   login,
+		ID:      req.ID,
+		Email:   req.Email,
+		IsAdmin: req.IsAdmin,
 	}, passwordHash); err != nil {
 		writeJSON(w, 500, map[string]any{"error": err.Error()})
 		return
@@ -249,6 +272,9 @@ func (h *Handlers) UpdateUser(w http.ResponseWriter, r *http.Request) {
 // @Failure     500    {object}  map[string]any
 // @Router      /api/users/{login} [delete]
 func (h *Handlers) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.requireAdmin(w, r); !ok {
+		return
+	}
 	login := chi.URLParam(r, "login")
 	if login == "" {
 		writeJSON(w, 400, map[string]any{"error": "login required"})
