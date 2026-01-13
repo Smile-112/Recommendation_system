@@ -10,6 +10,7 @@
   --success: #7ee082;
   --warning: #f5f25b;
   --info: #5b90f5;
+  --danger: #f47a7a;
 }
 
 * {
@@ -165,6 +166,12 @@ main {
   margin-bottom: 16px;
 }
 
+.card__subtitle {
+  margin: -6px 0 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .layout-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -234,6 +241,26 @@ select {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
+}
+
+.entity-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.entity-card {
+  background: #f7f7f7;
+  border-radius: 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  display: grid;
+  gap: 6px;
+}
+
+.entity-card span {
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .stat-card {
@@ -389,6 +416,12 @@ select {
   gap: 10px;
 }
 
+.device-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .device-card img {
   width: 100%;
   border-radius: 12px;
@@ -534,6 +567,41 @@ select {
   background: #ffe8b3;
 }
 
+.badge--success {
+  background: #e9f7ec;
+  color: #1d7b3d;
+}
+
+.badge--warning {
+  background: #fff7cc;
+  color: #7a6a00;
+}
+
+.badge--info {
+  background: #e4edff;
+  color: #1d4ed8;
+}
+
+.badge--danger {
+  background: #fdeaea;
+  color: #b91c1c;
+}
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 12px;
+  color: var(--text);
+}
+
 .table__actions {
   display: flex;
   gap: 6px;
@@ -547,6 +615,21 @@ select {
   gap: 8px;
   margin-top: 12px;
   color: var(--muted);
+}
+
+.helper-text {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: -6px;
+}
+
+.data-map {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-size: 14px;
 }
 
 .modal::backdrop {

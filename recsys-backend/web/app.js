@@ -16,6 +16,7 @@ const openDeviceModalBtn = document.getElementById('open-device-modal');
 const tasksDateInput = document.getElementById('tasks-date');
 const homeStats = document.getElementById('home-stats');
 const upcomingTasks = document.getElementById('upcoming-tasks');
+const entitySummary = document.getElementById('entity-summary');
 const homeGantt = document.getElementById('home-gantt');
 const tasksGantt = document.getElementById('tasks-gantt');
 const equipmentCards = document.getElementById('equipment-cards');
@@ -170,6 +171,18 @@ function getWorkspaceId() {
   return Number(workspaceSelect.value);
 }
 
+function getStoredWorkspaceId() {
+  return localStorage.getItem('workspaceId');
+}
+
+function setStoredWorkspaceId(id) {
+  if (id) {
+    localStorage.setItem('workspaceId', String(id));
+  } else {
+    localStorage.removeItem('workspaceId');
+  }
+}
+
 function mapById(items) {
   return items.reduce((acc, item) => {
     acc[item.id] = item;
@@ -241,6 +254,7 @@ async function loadWorkspaces() {
     opt.textContent = 'Нет данных';
     opt.value = '';
     workspaceSelect.appendChild(opt);
+    setStoredWorkspaceId('');
     resetWorkspaceState();
     return;
   }
@@ -250,6 +264,14 @@ async function loadWorkspaces() {
     opt.textContent = `${workspace.name} (#${workspace.id})`;
     workspaceSelect.appendChild(opt);
   });
+  const storedWorkspaceId = getStoredWorkspaceId();
+  const storedWorkspace = state.workspaces.find((workspace) => String(workspace.id) === storedWorkspaceId);
+  if (storedWorkspace) {
+    workspaceSelect.value = String(storedWorkspace.id);
+  } else if (!workspaceSelect.value) {
+    workspaceSelect.value = String(state.workspaces[0].id);
+  }
+  setStoredWorkspaceId(workspaceSelect.value);
 }
 
 async function loadReferenceData() {
@@ -423,6 +445,34 @@ function renderHomeStats() {
   homeDateLabel.textContent = formatDate(today);
 }
 
+function renderEntitySummary() {
+  if (!entitySummary) return;
+  if (!getWorkspaceId()) {
+    entitySummary.innerHTML = '<div class="gantt__empty">Выберите рабочее пространство</div>';
+    return;
+  }
+  const items = [
+    { label: 'Оборудование', value: state.devices.length },
+    { label: 'Типы оборудования', value: state.deviceTypes.length },
+    { label: 'Характеристики', value: state.equipmentCharacteristics.length },
+    { label: 'Операторы', value: state.operators.length },
+    { label: 'Задания', value: state.tasks.length },
+    { label: 'Типы заданий', value: state.taskTypes.length },
+    { label: 'Компетенции', value: state.operatorCompetencies.length },
+    { label: 'Поручения', value: state.userTasks.length }
+  ];
+  entitySummary.innerHTML = items
+    .map(
+      (item) => `
+        <div class="entity-card">
+          <strong>${item.value}</strong>
+          <span>${item.label}</span>
+        </div>
+      `
+    )
+    .join('');
+}
+
 function renderUpcomingTasks() {
   const operatorsById = mapById(state.operators);
   const devicesById = mapById(state.devices);
@@ -452,6 +502,9 @@ function renderUpcomingTasks() {
       const device = devicesById[task.device_id];
       const taskType = taskTypesById[task.device_task_type_id];
       const priority = prioritiesById[task.priority_id];
+      const priorityBadge = priority
+        ? `<span class="badge badge--info">${priority.name}</span>`
+        : '<span class="badge">Без приоритета</span>';
       return `
         <div class="table__row">
           <div>
@@ -461,6 +514,7 @@ function renderUpcomingTasks() {
             <div class="muted">Тип: ${taskType ? taskType.name : '—'} · Приоритет: ${
         priority ? priority.name : '—'
       }</div>
+            <div class="device-card__badges">${priorityBadge}</div>
           </div>
           <div>${formatTime(task.plan_start)}</div>
           <div>${formatTime(task.plan_end)}</div>
@@ -507,6 +561,15 @@ function renderEquipment() {
     const deviceType = deviceTypesById[device.device_type_id];
     const characteristicName =
       characteristicsById[deviceType?.equipment_characteristic_id]?.name || '—';
+    const stateLabel = deviceStatesById[device.device_state_id]?.name || 'Состояние неизвестно';
+    const stateBadgeClass = stateLabel.toLowerCase().includes('авар')
+      ? 'badge--danger'
+      : stateLabel.toLowerCase().includes('ремонт')
+      ? 'badge--warning'
+      : 'badge--success';
+    const recBadge = device.add_in_rec_system
+      ? '<span class="badge badge--info">В рекомендациях</span>'
+      : '<span class="badge">Без рекомендаций</span>';
     return `
       <div class="device-card">
         <img src="${device.photo_url || 'https://placehold.co/400x240?text=3D+Printer'}" alt="${device.name}" />
@@ -515,9 +578,13 @@ function renderEquipment() {
           <div class="muted">${deviceType?.name || 'Тип не указан'}</div>
           <div class="muted">Характеристика: ${characteristicName}</div>
         </div>
+        <div class="device-card__badges">
+          <span class="badge ${stateBadgeClass}">${stateLabel}</span>
+          ${recBadge}
+        </div>
         <div class="device-card__status">
-          <span>${deviceStatesById[device.device_state_id]?.name || 'Состояние неизвестно'}</span>
           <span>${activeTask ? 'В работе' : 'Простой'}</span>
+          <span>${activeTask ? `До ${formatTime(activeTask.plan_end)}` : 'Нет активных задач'}</span>
         </div>
         <div class="device-card__progress">
           <span style="width: ${progressPercent}%"></span>
@@ -559,6 +626,12 @@ function renderOperators() {
       const nextTask = tasks
         .filter((task) => task.plan_start)
         .sort((a, b) => new Date(a.plan_start) - new Date(b.plan_start))[0];
+      const competenciesHtml = competencies.length
+        ? competencies.map((item) => `<span class="chip">${item}</span>`).join('')
+        : '<span class="chip">Не указаны</span>';
+      const responsibilitiesHtml = responsibilities.length
+        ? responsibilities.map((item) => `<span class="chip">${item}</span>`).join('')
+        : '<span class="chip">Не указано</span>';
 
       return `
         <div class="operator-card">
@@ -567,8 +640,14 @@ function renderOperators() {
             <span class="muted">${operator.phone_number}</span>
           </div>
           <div class="operator-card__meta">
-            <div><strong>Компетенции:</strong> ${competencies.join(', ') || 'Не указаны'}</div>
-            <div><strong>Отвечает за:</strong> ${responsibilities.join(', ') || 'Не указано'}</div>
+            <div>
+              <strong>Компетенции:</strong>
+              <div class="chip-group">${competenciesHtml}</div>
+            </div>
+            <div>
+              <strong>Отвечает за:</strong>
+              <div class="chip-group">${responsibilitiesHtml}</div>
+            </div>
             <div><strong>Ближайшая задача:</strong> ${nextTask ? nextTask.name : 'Нет'}</div>
             <div><strong>Плановый старт:</strong> ${nextTask ? formatTime(nextTask.plan_start) : '—'}</div>
           </div>
@@ -739,6 +818,7 @@ function renderReferenceTables() {
 function renderAll() {
   renderSelects();
   renderHomeStats();
+  renderEntitySummary();
   renderUpcomingTasks();
   renderHomeGantt();
   renderEquipment();
@@ -1143,7 +1223,10 @@ navLinks.forEach((link) => {
   link.addEventListener('click', () => setActivePage(link.dataset.page));
 });
 
-refreshWorkspacesBtn.addEventListener('click', loadWorkspaces);
+refreshWorkspacesBtn.addEventListener('click', async () => {
+  await loadWorkspaces();
+  await loadWorkspaceData();
+});
 refreshDevicesBtn?.addEventListener('click', loadWorkspaceData);
 recomputePlanBtn?.addEventListener('click', recomputePlan);
 authActionButton.addEventListener('click', () => setActivePage('profile'));
@@ -1177,7 +1260,10 @@ deviceTypesList.addEventListener('click', handleReferenceAction);
 taskTypesList.addEventListener('click', handleReferenceAction);
 usersList.addEventListener('click', handleAdminAction);
 
-workspaceSelect.addEventListener('change', loadWorkspaceData);
+workspaceSelect.addEventListener('change', () => {
+  setStoredWorkspaceId(workspaceSelect.value);
+  loadWorkspaceData();
+});
 tasksDateInput.addEventListener('change', renderTasksPage);
 
 tasksDateInput.value = toLocalInputValue(new Date());
