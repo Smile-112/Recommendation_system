@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"recsys-backend/internal/service"
@@ -13,12 +14,18 @@ import (
 )
 
 type Handlers struct {
-	repos   *storage.Repos
-	planner *service.Planner
+	repos      *storage.Repos
+	planner    *service.Planner
+	sessions   map[string]storage.User
+	sessionsMu sync.RWMutex
 }
 
 func NewHandlers(repos *storage.Repos, planner *service.Planner) *Handlers {
-	return &Handlers{repos: repos, planner: planner}
+	return &Handlers{
+		repos:    repos,
+		planner:  planner,
+		sessions: make(map[string]storage.User),
+	}
 }
 
 // DeviceTaskDTO — DTO для Swagger (без time.Duration)

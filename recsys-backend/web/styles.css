@@ -81,6 +81,12 @@ main {
   gap: 12px;
 }
 
+.user-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .pill {
   padding: 6px 14px;
   border-radius: 999px;
@@ -229,6 +235,14 @@ select {
   background: #f7f7f7;
   border: 1px solid var(--border);
   font-size: 14px;
+}
+
+.table--wide .table__row {
+  grid-template-columns: 2fr 1fr 1fr;
+}
+
+.table__row span {
+  word-break: break-word;
 }
 
 .table__row strong {
@@ -446,6 +460,54 @@ select {
   color: var(--muted);
 }
 
+.form-grid,
+.inline-form {
+  display: grid;
+  gap: 12px;
+}
+
+.form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.inline-form {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.profile-summary {
+  display: grid;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.profile-summary strong {
+  font-size: 16px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f0f0f0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge--admin {
+  background: #ffe8b3;
+}
+
+.table__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .checkbox {
   display: flex;
   align-items: center;
@@ -505,6 +567,12 @@ select {
 }
 
 @media (max-width: 720px) {
+  .header-status {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
   .workspace-bar__controls {
     flex-direction: column;
     align-items: stretch;
@@ -522,5 +590,14 @@ select {
 
   .gantt__track {
     min-height: 52px;
+  }
+
+  .table__row,
+  .table--wide .table__row {
+    grid-template-columns: 1fr;
+  }
+
+  .table__actions {
+    justify-content: flex-start;
   }
 }
