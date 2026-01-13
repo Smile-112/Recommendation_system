@@ -15,6 +15,7 @@ const openOperatorModalBtn = document.getElementById('open-operator-modal');
 const openDeviceModalBtn = document.getElementById('open-device-modal');
 const openScheduleModalBtn = document.getElementById('open-schedule-modal');
 const tasksDateInput = document.getElementById('tasks-date');
+const tasksSortSelect = document.getElementById('tasks-sort');
 const homeStats = document.getElementById('home-stats');
 const upcomingTasks = document.getElementById('upcoming-tasks');
 const entitySummary = document.getElementById('entity-summary');
@@ -86,10 +87,15 @@ const state = {
   currentUser: null
 };
 
-const ganttHours = Array.from({ length: 14 }, (_, i) => 9 + i);
+const dayStartHour = 9;
+const dayEndHour = 22;
+const ganttHours = Array.from({ length: dayEndHour - dayStartHour }, (_, i) => dayStartHour + i);
+const ganttTotalMinutes = (dayEndHour - dayStartHour) * 60;
 const storedToken = localStorage.getItem('authToken');
 let authToken = storedToken || '';
 let autoRefreshTimer = null;
+let ganttDragState = null;
+let suppressGanttClick = false;
 
 async function fetchJSON(url, options) {
   const headers = new Headers(options?.headers || {});
@@ -374,12 +380,52 @@ function getTaskStatus(task) {
   return 'pending';
 }
 
+function getStatusLabel(status) {
+  const labels = {
+    done: 'Завершено',
+    progress: 'В работе',
+    pending: 'Ожидает',
+    lunch: 'Обед',
+    off: 'Не работает'
+  };
+  return labels[status] || status || 'Без статуса';
+}
+
+function getTaskTimeRange(task) {
+  const startValue = task._start
+    ? new Date(task._start)
+    : task.plan_start
+    ? new Date(task.plan_start)
+    : null;
+  const endValue = task._end
+    ? new Date(task._end)
+    : task.plan_end
+    ? new Date(task.plan_end)
+    : startValue && task.duration_min
+    ? new Date(startValue.getTime() + task.duration_min * 60000)
+    : null;
+  return { startValue, endValue };
+}
+
+function getMinutesFromDayStart(date) {
+  if (!date) return null;
+  return date.getHours() * 60 + date.getMinutes() - dayStartHour * 60;
+}
+
+function buildDateFromMinutes(date, minutesFromStart) {
+  const base = new Date(date);
+  base.setHours(dayStartHour, 0, 0, 0);
+  base.setMinutes(base.getMinutes() + minutesFromStart);
+  return base;
+}
+
 function buildGantt(container, tasks, labelFormatter) {
   if (!tasks.length) {
     container.innerHTML = '<div class="gantt__empty">Нет данных для отображения</div>';
     return;
   }
 
+  container.style.setProperty('--gantt-hours', ganttHours.length);
   const header = document.createElement('div');
   header.className = 'gantt__header';
   header.innerHTML = `<div>Название</div>${ganttHours
@@ -389,8 +435,8 @@ function buildGantt(container, tasks, labelFormatter) {
   container.innerHTML = '';
   container.appendChild(header);
 
-  const dayStart = 9 * 60;
-  const dayEnd = 22 * 60;
+  const dayStart = dayStartHour * 60;
+  const dayEnd = dayEndHour * 60;
   const totalMinutes = dayEnd - dayStart;
 
   tasks.forEach((task) => {
@@ -404,28 +450,11 @@ function buildGantt(container, tasks, labelFormatter) {
     const track = document.createElement('div');
     track.className = 'gantt__track';
 
-    const startValue = task._start
-      ? new Date(task._start)
-      : task.plan_start
-      ? new Date(task.plan_start)
-      : null;
-    const endValue = task._end
-      ? new Date(task._end)
-      : task.plan_end
-      ? new Date(task.plan_end)
-      : startValue && task.duration_min
-      ? new Date(startValue.getTime() + task.duration_min * 60000)
-      : null;
+    const { startValue, endValue } = getTaskTimeRange(task);
 
     if (startValue && endValue) {
-      const startMinutes = Math.max(
-        0,
-        startValue.getHours() * 60 + startValue.getMinutes() - dayStart
-      );
-      const endMinutes = Math.min(
-        totalMinutes,
-        endValue.getHours() * 60 + endValue.getMinutes() - dayStart
-      );
+      const startMinutes = Math.max(0, getMinutesFromDayStart(startValue));
+      const endMinutes = Math.min(totalMinutes, getMinutesFromDayStart(endValue));
       const width = Math.max(4, ((endMinutes - startMinutes) / totalMinutes) * 100);
       const left = (startMinutes / totalMinutes) * 100;
       const bar = document.createElement('div');
@@ -435,8 +464,12 @@ function buildGantt(container, tasks, labelFormatter) {
       bar.style.width = `${width}%`;
       bar.textContent = `${formatTime(startValue)} – ${formatTime(endValue)}`;
       bar.dataset.status = status;
+      bar.title = `${formatTime(startValue)} – ${formatTime(endValue)} · ${getStatusLabel(
+        status
+      )}`;
       if (task.id) {
         bar.dataset.taskId = task.id;
+        bar.classList.add('is-draggable');
       }
       if (task._userTaskId) {
         bar.dataset.userTaskId = task._userTaskId;
@@ -448,6 +481,135 @@ function buildGantt(container, tasks, labelFormatter) {
     row.appendChild(track);
     container.appendChild(row);
   });
+}
+
+function buildTaskPayload(task, overrides) {
+  return {
+    name: task.name,
+    doc_num: task.doc_num,
+    photo_url: task.photo_url,
+    deadline: task.deadline ? new Date(task.deadline) : null,
+    operator_id: Number(task.operator_id || 0),
+    device_id: Number(task.device_id || 0),
+    priority_id: Number(task.priority_id || 0),
+    device_task_type_id: Number(task.device_task_type_id || 0),
+    duration_min: Number(task.duration_min || 0),
+    setup_time_min: Number(task.setup_time_min || 0),
+    unload_time_min: Number(task.unload_time_min || 0),
+    need_operator: Boolean(task.need_operator),
+    add_in_rec_system: Boolean(task.add_in_rec_system),
+    plan_start: task.plan_start ? new Date(task.plan_start) : null,
+    plan_end: task.plan_end ? new Date(task.plan_end) : null,
+    ...overrides
+  };
+}
+
+function hasDeviceOverlap(taskId, deviceId, start, end) {
+  return state.tasks.some((task) => {
+    if (task.id === taskId) return false;
+    if (task.device_id !== deviceId) return false;
+    if (!task.plan_start || !task.plan_end) return false;
+    const otherStart = new Date(task.plan_start);
+    const otherEnd = new Date(task.plan_end);
+    return start < otherEnd && end > otherStart;
+  });
+}
+
+async function updateTaskSchedule(task, newStart, newEnd) {
+  const workspaceId = getWorkspaceId();
+  if (!workspaceId) return false;
+  const payload = buildTaskPayload(task, { plan_start: newStart, plan_end: newEnd });
+  await fetchJSON(`${apiBase}/device-tasks/${task.id}?workspace_id=${workspaceId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  await loadWorkspaceData();
+  return true;
+}
+
+function startGanttDrag(event) {
+  const bar = event.target.closest('.gantt__bar');
+  if (!bar?.dataset.taskId) return;
+  const task = state.tasks.find((item) => item.id === Number(bar.dataset.taskId));
+  if (!task?.plan_start || !task?.plan_end) return;
+  const startValue = new Date(task.plan_start);
+  const endValue = new Date(task.plan_end);
+  const startMinutes = getMinutesFromDayStart(startValue);
+  const endMinutes = getMinutesFromDayStart(endValue);
+  if (startMinutes === null || endMinutes === null) return;
+  const track = bar.parentElement;
+  const trackRect = track.getBoundingClientRect();
+  if (!trackRect.width) return;
+  ganttDragState = {
+    bar,
+    task,
+    startMinutes,
+    durationMinutes: endMinutes - startMinutes,
+    trackWidth: trackRect.width,
+    startX: event.clientX,
+    newStartMinutes: startMinutes,
+    originalLeft: bar.style.left,
+    pointerId: event.pointerId,
+    moved: false
+  };
+  bar.classList.add('is-dragging');
+  bar.setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+
+function moveGanttDrag(event) {
+  if (!ganttDragState) return;
+  const delta = event.clientX - ganttDragState.startX;
+  if (Math.abs(delta) > 3) {
+    ganttDragState.moved = true;
+  }
+  const minutesDelta = (delta / ganttDragState.trackWidth) * ganttTotalMinutes;
+  let newStartMinutes = ganttDragState.startMinutes + minutesDelta;
+  newStartMinutes = Math.max(
+    0,
+    Math.min(ganttTotalMinutes - ganttDragState.durationMinutes, newStartMinutes)
+  );
+  ganttDragState.newStartMinutes = newStartMinutes;
+  ganttDragState.bar.style.left = `${(newStartMinutes / ganttTotalMinutes) * 100}%`;
+}
+
+async function endGanttDrag() {
+  if (!ganttDragState) return;
+  const {
+    bar,
+    task,
+    durationMinutes,
+    newStartMinutes,
+    originalLeft,
+    moved,
+    pointerId
+  } = ganttDragState;
+  ganttDragState = null;
+  bar.classList.remove('is-dragging');
+  if (pointerId !== undefined) {
+    bar.releasePointerCapture?.(pointerId);
+  }
+  if (!moved) return;
+  suppressGanttClick = true;
+  setTimeout(() => {
+    suppressGanttClick = false;
+  }, 0);
+  const roundedStartMinutes = Math.round(newStartMinutes);
+  const newStart = buildDateFromMinutes(new Date(task.plan_start), roundedStartMinutes);
+  const newEnd = new Date(newStart.getTime() + durationMinutes * 60000);
+  if (hasDeviceOverlap(task.id, task.device_id, newStart, newEnd)) {
+    alert('Нельзя пересекать задания на одном принтере.');
+    bar.style.left = originalLeft;
+    return;
+  }
+  try {
+    await updateTaskSchedule(task, newStart, newEnd);
+  } catch (error) {
+    console.error(error);
+    alert('Не удалось обновить время задачи.');
+    bar.style.left = originalLeft;
+  }
 }
 
 function renderHomeStats() {
@@ -709,7 +871,95 @@ function renderOperators() {
     .join('');
 }
 
+function buildOperatorsGantt(container, tasksByOperator) {
+  if (!container) return;
+  if (!tasksByOperator.length) {
+    container.innerHTML = '<div class="gantt__empty">Нет данных для отображения</div>';
+    return;
+  }
+
+  container.style.setProperty('--gantt-hours', ganttHours.length);
+  const header = document.createElement('div');
+  header.className = 'gantt__header';
+  header.innerHTML = `<div>Оператор</div>${ganttHours
+    .map((hour) => `<div>${hour.toString().padStart(2, '0')}:00</div>`)
+    .join('')}`;
+
+  container.innerHTML = '';
+  container.appendChild(header);
+
+  const dayStart = dayStartHour * 60;
+  const dayEnd = dayEndHour * 60;
+  const totalMinutes = dayEnd - dayStart;
+
+  tasksByOperator.forEach((row) => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'gantt__row';
+
+    const label = document.createElement('div');
+    label.className = 'gantt__label';
+    label.innerHTML = `
+      ${row.operator.full_name}
+      <small>${row.tasks.length + row.userTasks.length} задач(и)</small>
+    `;
+
+    const track = document.createElement('div');
+    track.className = 'gantt__track gantt__track--stacked';
+
+    const items = [
+      ...row.tasks.map((task) => ({
+        ...task,
+        _status: getTaskStatus(task)
+      })),
+      ...row.userTasks.map((task) => ({
+        ...task,
+        _start: task.start_time,
+        _end: task.end_time,
+        _status: getUserTaskStatus(task),
+        _userTaskId: task.id
+      }))
+    ];
+
+    items.forEach((task, index) => {
+      const { startValue, endValue } = getTaskTimeRange(task);
+      if (!startValue || !endValue) return;
+      const startMinutes = Math.max(0, getMinutesFromDayStart(startValue));
+      const endMinutes = Math.min(totalMinutes, getMinutesFromDayStart(endValue));
+      const width = Math.max(4, ((endMinutes - startMinutes) / totalMinutes) * 100);
+      const left = (startMinutes / totalMinutes) * 100;
+      const bar = document.createElement('div');
+      const status = task._status || getTaskStatus(task);
+      bar.className = `gantt__bar gantt__bar--stacked ${status}`;
+      bar.style.left = `${left}%`;
+      bar.style.width = `${width}%`;
+      bar.style.top = `${12 + index * 32}px`;
+      bar.textContent = `${formatTime(startValue)} – ${formatTime(endValue)}`;
+      bar.dataset.status = status;
+      bar.title = `${formatTime(startValue)} – ${formatTime(endValue)} · ${getStatusLabel(
+        status
+      )}`;
+      if (task._userTaskId) {
+        bar.dataset.userTaskId = task._userTaskId;
+      }
+      track.appendChild(bar);
+    });
+
+    const minHeight = Math.max(50, items.length * 34 + 12);
+    track.style.minHeight = `${minHeight}px`;
+
+    rowEl.appendChild(label);
+    rowEl.appendChild(track);
+    container.appendChild(rowEl);
+  });
+}
+
 function renderOperatorsGantt() {
+  if (!operatorsGantt) return;
+  if (!state.operators.length) {
+    operatorsGantt.innerHTML = '<div class="gantt__empty">Добавьте операторов для отображения</div>';
+    return;
+  }
+
   const tasksByOperator = state.operators.map((operator) => {
     const tasks = state.tasks.filter((task) => task.operator_id === operator.id);
     const userTasks = state.userTasks.filter((task) => task.operator_id === operator.id);
@@ -720,27 +970,7 @@ function renderOperatorsGantt() {
     };
   });
 
-  const flattenedTasks = tasksByOperator.flatMap((row) => [
-    ...row.tasks.map((task) => ({
-      ...task,
-      _label: row.operator.full_name
-    })),
-    ...row.userTasks.map((task) => ({
-      ...task,
-      _label: row.operator.full_name,
-      _start: task.start_time,
-      _end: task.end_time,
-      _status: getUserTaskStatus(task),
-      _userTaskId: task.id
-    }))
-  ]);
-
-  buildGantt(operatorsGantt, flattenedTasks, (task) => {
-    return `
-      ${task._label}
-      <small>${task.name}</small>
-    `;
-  });
+  buildOperatorsGantt(operatorsGantt, tasksByOperator);
 }
 
 function populateSelect(select, items, formatter, placeholder = 'Выберите...') {
@@ -775,7 +1005,22 @@ function renderSelects() {
 
 function renderTasksPage() {
   const selectedDate = parseDateInput(tasksDateInput.value) || new Date();
+  const sortMode = tasksSortSelect?.value || 'task';
+  const devicesById = mapById(state.devices);
   const tasksForDate = getTasksForDate(selectedDate).sort((a, b) => {
+    if (sortMode === 'device') {
+      const aDevice = devicesById[a.device_id]?.name || '';
+      const bDevice = devicesById[b.device_id]?.name || '';
+      if (aDevice !== bDevice) {
+        return aDevice.localeCompare(bDevice, 'ru');
+      }
+    } else {
+      const aName = a.name || '';
+      const bName = b.name || '';
+      if (aName !== bName) {
+        return aName.localeCompare(bName, 'ru');
+      }
+    }
     const aDate = a.plan_start || a.deadline || 0;
     const bDate = b.plan_start || b.deadline || 0;
     return new Date(aDate) - new Date(bDate);
@@ -1526,6 +1771,7 @@ workspaceSelect.addEventListener('change', () => {
   loadWorkspaceData();
 });
 tasksDateInput.addEventListener('change', renderTasksPage);
+tasksSortSelect?.addEventListener('change', renderTasksPage);
 
 homeStats?.addEventListener('click', (event) => {
   const card = event.target.closest('[data-stat]');
@@ -1563,6 +1809,7 @@ upcomingTasks?.addEventListener('click', (event) => {
 });
 
 tasksGantt?.addEventListener('click', (event) => {
+  if (suppressGanttClick) return;
   const bar = event.target.closest('.gantt__bar');
   if (!bar?.dataset.taskId) return;
   openTaskEditor(bar.dataset.taskId);
@@ -1600,6 +1847,10 @@ operatorsGantt?.addEventListener('mouseover', (event) =>
   handleLegendHover(event, operatorsGanttLegend)
 );
 operatorsGantt?.addEventListener('mouseout', () => clearLegendHover(operatorsGanttLegend));
+homeGantt?.addEventListener('pointerdown', startGanttDrag);
+tasksGantt?.addEventListener('pointerdown', startGanttDrag);
+document.addEventListener('pointermove', moveGanttDrag);
+document.addEventListener('pointerup', endGanttDrag);
 
 document.addEventListener('click', (event) => {
   if (!event.target.closest('button')) return;

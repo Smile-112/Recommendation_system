@@ -313,11 +313,12 @@ select {
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
+  --gantt-hours: 13;
 }
 
 .gantt__header {
   display: grid;
-  grid-template-columns: 200px repeat(14, 1fr);
+  grid-template-columns: 200px repeat(var(--gantt-hours), 1fr);
   background: #f0f0f0;
   border-bottom: 1px solid var(--border);
   font-size: 12px;
@@ -359,8 +360,13 @@ select {
   position: relative;
   min-height: 50px;
   background-image: linear-gradient(to right, transparent calc(100% - 1px), #e6e6e6 calc(100% - 1px));
-  background-size: calc(100% / 14) 100%;
+  background-size: calc(100% / var(--gantt-hours)) 100%;
   background-repeat: repeat-x;
+  background-position: left top;
+}
+
+.gantt__track--stacked {
+  padding: 6px 0;
 }
 
 .gantt__bar {
@@ -378,6 +384,21 @@ select {
   overflow: hidden;
   text-overflow: ellipsis;
   transform: translateY(-50%);
+}
+
+.gantt__bar.is-draggable {
+  cursor: grab;
+}
+
+.gantt__bar.is-dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.gantt__bar--stacked {
+  transform: none;
+  height: 26px;
 }
 
 .gantt__bar.done {
@@ -641,9 +662,13 @@ select {
 
 .checkbox {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   color: var(--muted);
+}
+
+.checkbox input {
+  margin-top: 1px;
 }
 
 .checkbox-group {
