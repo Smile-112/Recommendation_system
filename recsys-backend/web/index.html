@@ -67,6 +67,14 @@
             <button class="button button--ghost" id="recompute-plan">Пересчитать план</button>
           </div>
           <div class="stats" id="home-stats"></div>
+          <div class="muted">
+            <p><strong>Как работает «Пересчитать план»:</strong></p>
+            <ul>
+              <li>Берёт задачи без расписания и сортирует по дедлайну, затем по приоритету.</li>
+              <li>Учитывает занятость принтеров и операторов, а также рабочие часы (09:00–22:00).</li>
+              <li>Для каждой задачи ищет ближайший свободный слот с учётом длительности, настройки и снятия.</li>
+            </ul>
+          </div>
         </div>
         <div class="card">
           <div class="card__header">
@@ -369,7 +377,7 @@
         </label>
         <label>
           Номер документа
-          <input name="doc_num" type="text" placeholder="DOC-0001" pattern="DOC-\\d{4}" required />
+          <input name="doc_num" type="text" placeholder="DOC-000" pattern="DOC-\\d{3,6}" required />
         </label>
         <span class="helper-text">Документы связывают задания с планами производства.</span>
         <label>
@@ -528,6 +536,8 @@
       </div>
     </form>
   </dialog>
+
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
 
   <script src="/app.js"></script>
 </body>
