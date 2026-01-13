@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/brianvoe/gofakeit/v6"
+
 	"recsys-backend/internal/storage"
 )
 
@@ -48,10 +50,10 @@ func (h *Handlers) SeedDevData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	faker := rand.New(rand.NewSource(time.Now().UnixNano()))
+	faker := gofakeit.New(rand.NewSource(time.Now().UnixNano()))
 	now := time.Now()
 
-	deviceStateID, err := h.repos.CreateDeviceState(r.Context(), pickString(faker, []string{
+	deviceStateID, err := h.repos.CreateDeviceState(r.Context(), faker.RandomString([]string{
 		"Готов",
 		"В ремонте",
 		"На обслуживании",
@@ -61,7 +63,7 @@ func (h *Handlers) SeedDevData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	priorityID, err := h.repos.CreatePriority(r.Context(), pickString(faker, []string{
+	priorityID, err := h.repos.CreatePriority(r.Context(), faker.RandomString([]string{
 		"Низкий",
 		"Средний",
 		"Высокий",
@@ -73,7 +75,7 @@ func (h *Handlers) SeedDevData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	characteristicID, err := h.repos.CreateEquipmentCharacteristic(r.Context(), storage.EquipmentCharacteristic{
-		Name:        pickString(faker, []string{"Пластик", "Металл", "Смола", "Композит"}),
+		Name:        faker.RandomString([]string{"Пластик", "Металл", "Смола", "Композит"}),
 		WorkspaceID: workspaceID,
 	})
 	if err != nil {
@@ -81,7 +83,7 @@ func (h *Handlers) SeedDevData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deviceTypeName := fmt.Sprintf("3D-принтер %s", pickString(faker, []string{"FDM", "SLA", "SLS"}))
+	deviceTypeName := fmt.Sprintf("3D-принтер %s", faker.RandomString([]string{"FDM", "SLA", "SLS"}))
 	deviceTypeID, err := h.repos.CreateDeviceType(r.Context(), storage.DeviceType{
 		Name:                      deviceTypeName,
 		EquipmentCharacteristicID: characteristicID,
@@ -93,7 +95,7 @@ func (h *Handlers) SeedDevData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	addInRec := true
-	deviceName := fmt.Sprintf("%s %s", deviceTypeName, pickString(faker, []string{"MK4", "Pro", "X2"}))
+	deviceName := fmt.Sprintf("%s %s", deviceTypeName, faker.RandomString([]string{"MK4", "Pro", "X2"}))
 	deviceID, err := h.repos.CreateDevice(r.Context(), storage.Device{
 		Name:           deviceName,
 		PhotoURL:       "https://placehold.co/400x300?text=3D+Printer",
@@ -108,8 +110,8 @@ func (h *Handlers) SeedDevData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	operatorID, err := h.repos.CreateOperator(r.Context(), storage.Operator{
-		FullName:    pickString(faker, []string{"Иван Петров", "Мария Кузнецова", "Алексей Смирнов", "Ольга Павлова"}),
-		PhoneNumber: randomPhoneNumber(faker),
+		FullName:    faker.Name(),
+		PhoneNumber: faker.Numerify("+7 (###) ###-##-##"),
 		WorkspaceID: workspaceID,
 		UserLogin:   user.Login,
 	})
@@ -136,7 +138,7 @@ func (h *Handlers) SeedDevData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	taskTypeID, err := h.repos.CreateDeviceTaskType(r.Context(), storage.DeviceTaskType{
-		Name:        pickString(faker, []string{"Прототипирование", "Печать корпуса", "Мелкосерийное производство"}),
+		Name:        faker.RandomString([]string{"Прототипирование", "Печать корпуса", "Мелкосерийное производство"}),
 		WorkspaceID: workspaceID,
 	})
 	if err != nil {
@@ -144,16 +146,16 @@ func (h *Handlers) SeedDevData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	durationMin := randomInt(faker, 45, 180)
-	setupMin := randomInt(faker, 10, 45)
-	unloadMin := randomInt(faker, 5, 20)
-	planStart := now.Add(time.Duration(randomInt(faker, 1, 6)) * time.Hour)
+	durationMin := faker.Number(45, 180)
+	setupMin := faker.Number(10, 45)
+	unloadMin := faker.Number(5, 20)
+	planStart := now.Add(time.Duration(faker.Number(1, 6)) * time.Hour)
 	planEnd := planStart.Add(time.Duration(durationMin) * time.Minute)
-	deadline := planEnd.Add(time.Duration(randomInt(faker, 4, 48)) * time.Hour)
-	docNum := fmt.Sprintf("DOC-%04d", randomInt(faker, 1, 9999))
+	deadline := planEnd.Add(time.Duration(faker.Number(4, 48)) * time.Hour)
+	docNum := fmt.Sprintf("DOC-%04d", faker.Number(1, 9999))
 
 	deviceTaskID, err := h.repos.CreateDeviceTask(r.Context(), storage.DeviceTask{
-		Name:             fmt.Sprintf("Изделие: %s", pickString(faker, []string{"корпус", "шестерня", "держатель", "кожух"})),
+		Name:             fmt.Sprintf("Изделие: %s", faker.RandomString([]string{"корпус", "шестерня", "держатель", "кожух"})),
 		Deadline:         &deadline,
 		Duration:         time.Duration(durationMin) * time.Minute,
 		SetupTime:        time.Duration(setupMin) * time.Minute,
@@ -176,9 +178,9 @@ func (h *Handlers) SeedDevData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userTaskStart := planStart.Add(time.Duration(randomInt(faker, 15, 60)) * time.Minute)
-	userTaskEnd := userTaskStart.Add(time.Duration(randomInt(faker, 30, 90)) * time.Minute)
-	priorityValue := randomInt(faker, 1, 3)
+	userTaskStart := planStart.Add(time.Duration(faker.Number(15, 60)) * time.Minute)
+	userTaskEnd := userTaskStart.Add(time.Duration(faker.Number(30, 90)) * time.Minute)
+	priorityValue := faker.Number(1, 3)
 	completionMark := false
 
 	userTaskID, err := h.repos.CreateUserTask(r.Context(), storage.UserTask{
@@ -247,35 +249,13 @@ func (h *Handlers) resolveWorkspaceID(ctx context.Context, workspaceID int64, us
 		return workspaces[0].ID, nil
 	}
 
+	faker := gofakeit.New(rand.NewSource(time.Now().UnixNano()))
 	createdID, err := h.repos.CreateWorkspace(ctx, storage.Workspace{
-		Name:      fmt.Sprintf("Тестовый цех %s", pickString(rand.New(rand.NewSource(time.Now().UnixNano())), []string{"Север", "Центр", "Восток"})),
+		Name:      fmt.Sprintf("Тестовый цех %s", faker.RandomString([]string{"Север", "Центр", "Восток"})),
 		UserLogin: userLogin,
 	})
 	if err != nil {
 		return 0, err
 	}
 	return createdID, nil
-}
-
-func randomPhoneNumber(faker *rand.Rand) string {
-	return fmt.Sprintf("+7 (%03d) %03d-%02d-%02d",
-		randomInt(faker, 900, 999),
-		randomInt(faker, 100, 999),
-		randomInt(faker, 10, 99),
-		randomInt(faker, 10, 99),
-	)
-}
-
-func randomInt(rng *rand.Rand, min int, max int) int {
-	if max <= min {
-		return min
-	}
-	return rng.Intn(max-min+1) + min
-}
-
-func pickString(rng *rand.Rand, options []string) string {
-	if len(options) == 0 {
-		return ""
-	}
-	return options[rng.Intn(len(options))]
 }
