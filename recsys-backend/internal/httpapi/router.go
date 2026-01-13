@@ -32,6 +32,12 @@ func NewRouter(h *Handlers) http.Handler {
 			r.Get("/me", h.Me)
 		})
 
+		// Dev-only helpers (легко удалить при необходимости).
+		api.Route("/dev", func(r chi.Router) {
+			r.Post("/seed", h.SeedDevData)
+			r.Post("/clear", h.ClearDevData)
+		})
+
 		api.Route("/users", func(r chi.Router) {
 			r.Get("/", h.ListUsers)
 			r.Post("/", h.CreateUser)
