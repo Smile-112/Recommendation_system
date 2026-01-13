@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 FROM golang:1.24-alpine AS build
 WORKDIR /src
 
@@ -16,6 +14,7 @@ RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 
 COPY --from=build /out/recsys /app/recsys
+COPY web /app/web
 
 EXPOSE 8080
 USER app
