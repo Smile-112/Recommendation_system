@@ -317,7 +317,7 @@ select {
 
 .gantt__header {
   display: grid;
-  grid-template-columns: 220px repeat(14, 1fr);
+  grid-template-columns: 200px repeat(14, 1fr);
   background: #f0f0f0;
   border-bottom: 1px solid var(--border);
   font-size: 12px;
@@ -337,7 +337,7 @@ select {
 
 .gantt__row {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 200px 1fr;
   border-bottom: 1px solid var(--border);
 }
 
@@ -357,19 +357,16 @@ select {
 
 .gantt__track {
   position: relative;
-  background: repeating-linear-gradient(
-    to right,
-    transparent 0,
-    transparent calc(100% / 14 - 1px),
-    #e6e6e6 calc(100% / 14 - 1px),
-    #e6e6e6 calc(100% / 14)
-  );
+  min-height: 50px;
+  background-image: linear-gradient(to right, transparent calc(100% - 1px), #e6e6e6 calc(100% - 1px));
+  background-size: calc(100% / 14) 100%;
+  background-repeat: repeat-x;
 }
 
 .gantt__bar {
   position: absolute;
-  top: 8px;
-  height: 26px;
+  top: 50%;
+  height: 30px;
   border-radius: 12px;
   padding: 4px 8px;
   font-size: 12px;
@@ -380,6 +377,7 @@ select {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transform: translateY(-50%);
 }
 
 .gantt__bar.done {
@@ -393,6 +391,16 @@ select {
 .gantt__bar.pending {
   background: var(--info);
   color: #fff;
+}
+
+.gantt__bar.lunch {
+  background: #f7c66a;
+  color: #1c1c1c;
+}
+
+.gantt__bar.off {
+  background: #b3b3b3;
+  color: #1c1c1c;
 }
 
 .gantt__empty {
@@ -491,6 +499,20 @@ select {
   color: var(--muted);
 }
 
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.legend--interactive .legend__item.is-active {
+  background: var(--accent-light);
+  color: var(--text);
+}
+
 .legend__swatch {
   display: inline-block;
   width: 36px;
@@ -509,6 +531,14 @@ select {
 
 .legend__swatch.pending {
   background: var(--info);
+}
+
+.legend__swatch.lunch {
+  background: #f7c66a;
+}
+
+.legend__swatch.off {
+  background: #b3b3b3;
 }
 
 .toolbar {
@@ -611,10 +641,25 @@ select {
 
 .checkbox {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  margin-top: 12px;
   color: var(--muted);
+}
+
+.checkbox-group {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .helper-text {

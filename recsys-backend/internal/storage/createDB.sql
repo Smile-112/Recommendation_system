@@ -181,7 +181,7 @@ CREATE TABLE "user_task" (
   "usertsk_priority" INTEGER,
   "usertsk_complitionmark" BOOLEAN,
   "workspace" INTEGER NOT NULL,
-  "device_task" INTEGER NOT NULL,
+  "device_task" INTEGER,
   "operator" INTEGER NOT NULL
 );
 

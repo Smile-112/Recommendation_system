@@ -109,7 +109,7 @@ type UserTask struct {
 	Priority       *int       `json:"priority"`
 	CompletionMark *bool      `json:"completion_mark"`
 	WorkspaceID    int64      `json:"workspace_id"`
-	DeviceTaskID   int64      `json:"device_task_id"`
+	DeviceTaskID   *int64     `json:"device_task_id"`
 	OperatorID     int64      `json:"operator_id"`
 }
 
@@ -884,8 +884,13 @@ func (r *Repos) ListUserTasks(ctx context.Context, workspaceID int64) ([]UserTas
 	var res []UserTask
 	for rows.Next() {
 		var t UserTask
-		if err := rows.Scan(&t.ID, &t.Name, &t.StartTime, &t.EndTime, &t.Priority, &t.CompletionMark, &t.WorkspaceID, &t.DeviceTaskID, &t.OperatorID); err != nil {
+		var deviceTaskID pgtype.Int8
+		if err := rows.Scan(&t.ID, &t.Name, &t.StartTime, &t.EndTime, &t.Priority, &t.CompletionMark, &t.WorkspaceID, &deviceTaskID, &t.OperatorID); err != nil {
 			return nil, err
+		}
+		if deviceTaskID.Valid {
+			value := deviceTaskID.Int64
+			t.DeviceTaskID = &value
 		}
 		res = append(res, t)
 	}
@@ -894,12 +899,20 @@ func (r *Repos) ListUserTasks(ctx context.Context, workspaceID int64) ([]UserTas
 
 func (r *Repos) GetUserTask(ctx context.Context, id int64) (UserTask, error) {
 	var t UserTask
+	var deviceTaskID pgtype.Int8
 	err := r.DB.QueryRow(ctx, `
 		SELECT usertsk_id, usertsk_name, usertsk_starttime, usertsk_endtime,
 			usertsk_priority, usertsk_complitionmark, workspace, device_task, operator
 		FROM user_task
 		WHERE usertsk_id = $1
-	`, id).Scan(&t.ID, &t.Name, &t.StartTime, &t.EndTime, &t.Priority, &t.CompletionMark, &t.WorkspaceID, &t.DeviceTaskID, &t.OperatorID)
+	`, id).Scan(&t.ID, &t.Name, &t.StartTime, &t.EndTime, &t.Priority, &t.CompletionMark, &t.WorkspaceID, &deviceTaskID, &t.OperatorID)
+	if err != nil {
+		return t, err
+	}
+	if deviceTaskID.Valid {
+		value := deviceTaskID.Int64
+		t.DeviceTaskID = &value
+	}
 	return t, err
 }
 

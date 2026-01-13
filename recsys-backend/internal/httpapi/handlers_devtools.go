@@ -189,7 +189,7 @@ func (h *Handlers) SeedDevData(w http.ResponseWriter, r *http.Request) {
 		Priority:       &priorityValue,
 		CompletionMark: &completionMark,
 		WorkspaceID:    workspaceID,
-		DeviceTaskID:   deviceTaskID,
+		DeviceTaskID:   &deviceTaskID,
 		OperatorID:     operatorID,
 	})
 	if err != nil {
