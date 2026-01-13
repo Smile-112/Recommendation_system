@@ -29,8 +29,10 @@ const registerForm = document.getElementById('register-form');
 const logoutButton = document.getElementById('logout-button');
 const usersList = document.getElementById('users-list');
 const adminPanel = document.getElementById('admin-panel');
+const equipmentCharacteristicForm = document.getElementById('equipment-characteristic-form');
 const deviceTypeForm = document.getElementById('device-type-form');
 const taskTypeForm = document.getElementById('task-type-form');
+const equipmentCharacteristicsList = document.getElementById('equipment-characteristics-list');
 const deviceTypesList = document.getElementById('device-types-list');
 const taskTypesList = document.getElementById('task-types-list');
 const equipmentCharacteristicSelect = document.getElementById('equipment-characteristic-select');
@@ -490,6 +492,7 @@ function renderHomeGantt() {
 
 function renderEquipment() {
   const deviceTypesById = mapById(state.deviceTypes);
+  const characteristicsById = mapById(state.equipmentCharacteristics);
   const deviceStatesById = mapById(state.deviceStates);
   const tasksByDevice = state.tasks.reduce((acc, task) => {
     if (!acc[task.device_id]) acc[task.device_id] = [];
@@ -501,12 +504,16 @@ function renderEquipment() {
     const deviceTasks = tasksByDevice[device.id] || [];
     const activeTask = deviceTasks.find((task) => getTaskStatus(task) === 'progress');
     const progressPercent = activeTask ? 70 : deviceTasks.length ? 40 : 0;
+    const deviceType = deviceTypesById[device.device_type_id];
+    const characteristicName =
+      characteristicsById[deviceType?.equipment_characteristic_id]?.name || '—';
     return `
       <div class="device-card">
         <img src="${device.photo_url || 'https://placehold.co/400x240?text=3D+Printer'}" alt="${device.name}" />
         <div>
           <strong>${device.name}</strong>
-          <div class="muted">${deviceTypesById[device.device_type_id]?.name || 'Тип не указан'}</div>
+          <div class="muted">${deviceType?.name || 'Тип не указан'}</div>
+          <div class="muted">Характеристика: ${characteristicName}</div>
         </div>
         <div class="device-card__status">
           <span>${deviceStatesById[device.device_state_id]?.name || 'Состояние неизвестно'}</span>
@@ -646,6 +653,35 @@ function renderTasksPage() {
 
 function renderReferenceTables() {
   const characteristicsById = mapById(state.equipmentCharacteristics);
+
+  if (!state.equipmentCharacteristics.length) {
+    equipmentCharacteristicsList.innerHTML =
+      '<div class="gantt__empty">Характеристики оборудования не добавлены</div>';
+  } else {
+    const header = `
+      <div class="table__row">
+        <strong>Название</strong>
+        <strong>Workspace</strong>
+        <strong>Действия</strong>
+      </div>
+    `;
+    const rows = state.equipmentCharacteristics
+      .map(
+        (item) => `
+        <div class="table__row">
+          <div><strong>${item.name}</strong><br /><span class="muted">#${item.id}</span></div>
+          <div>${item.workspace_id || '—'}</div>
+          <div class="table__actions">
+            <button class="button button--ghost" data-delete-equipment-characteristic="${
+              item.id
+            }" type="button">Удалить</button>
+          </div>
+        </div>
+      `
+      )
+      .join('');
+    equipmentCharacteristicsList.innerHTML = header + rows;
+  }
 
   if (!state.deviceTypes.length) {
     deviceTypesList.innerHTML = '<div class="gantt__empty">Типы оборудования не добавлены</div>';
@@ -972,6 +1008,22 @@ async function createDeviceType(event) {
   await loadWorkspaceData();
 }
 
+async function createEquipmentCharacteristic(event) {
+  event.preventDefault();
+  const workspaceId = getWorkspaceId();
+  if (!workspaceId) return;
+  if (!equipmentCharacteristicForm.reportValidity()) return;
+  const formData = new FormData(equipmentCharacteristicForm);
+  const payload = Object.fromEntries(formData.entries());
+  await fetchJSON(`${apiBase}/workspaces/${workspaceId}/equipment-characteristics`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  equipmentCharacteristicForm.reset();
+  await loadWorkspaceData();
+}
+
 async function createTaskType(event) {
   event.preventDefault();
   const workspaceId = getWorkspaceId();
@@ -989,8 +1041,16 @@ async function createTaskType(event) {
 }
 
 async function handleReferenceAction(event) {
+  const deleteEquipmentCharacteristicId = event.target.dataset.deleteEquipmentCharacteristic;
   const deleteDeviceTypeId = event.target.dataset.deleteDeviceType;
   const deleteTaskTypeId = event.target.dataset.deleteTaskType;
+  if (deleteEquipmentCharacteristicId) {
+    await fetchJSON(`${apiBase}/equipment-characteristics/${deleteEquipmentCharacteristicId}`, {
+      method: 'DELETE'
+    });
+    await loadWorkspaceData();
+    return;
+  }
   if (deleteDeviceTypeId) {
     await fetchJSON(`${apiBase}/device-types/${deleteDeviceTypeId}`, { method: 'DELETE' });
     await loadWorkspaceData();
@@ -1107,10 +1167,12 @@ workspaceForm.addEventListener('submit', createWorkspace);
 taskForm.addEventListener('submit', createTask);
 operatorForm.addEventListener('submit', createOperator);
 deviceForm.addEventListener('submit', createDevice);
+equipmentCharacteristicForm.addEventListener('submit', createEquipmentCharacteristic);
 deviceTypeForm.addEventListener('submit', createDeviceType);
 taskTypeForm.addEventListener('submit', createTaskType);
 loginForm.addEventListener('submit', handleLogin);
 registerForm.addEventListener('submit', handleRegister);
+equipmentCharacteristicsList.addEventListener('click', handleReferenceAction);
 deviceTypesList.addEventListener('click', handleReferenceAction);
 taskTypesList.addEventListener('click', handleReferenceAction);
 usersList.addEventListener('click', handleAdminAction);

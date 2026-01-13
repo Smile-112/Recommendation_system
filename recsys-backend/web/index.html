@@ -150,6 +150,19 @@
       <div class="layout-grid">
         <div class="card">
           <div class="card__header">
+            <h2>Характеристики оборудования</h2>
+          </div>
+          <form class="inline-form" id="equipment-characteristic-form">
+            <label>
+              Название
+              <input name="name" type="text" required />
+            </label>
+            <button class="button" type="submit">Добавить</button>
+          </form>
+          <div class="table table--wide" id="equipment-characteristics-list"></div>
+        </div>
+        <div class="card">
+          <div class="card__header">
             <h2>Типы оборудования</h2>
           </div>
           <form class="inline-form" id="device-type-form">

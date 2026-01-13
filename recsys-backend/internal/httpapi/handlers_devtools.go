@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"time"
 
@@ -50,7 +49,7 @@ func (h *Handlers) SeedDevData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	faker := gofakeit.New(rand.NewSource(time.Now().UnixNano()))
+	faker := gofakeit.New(time.Now().UnixNano())
 	now := time.Now()
 
 	deviceStateID, err := h.repos.CreateDeviceState(r.Context(), faker.RandomString([]string{
@@ -249,7 +248,7 @@ func (h *Handlers) resolveWorkspaceID(ctx context.Context, workspaceID int64, us
 		return workspaces[0].ID, nil
 	}
 
-	faker := gofakeit.New(rand.NewSource(time.Now().UnixNano()))
+	faker := gofakeit.New(time.Now().UnixNano())
 	createdID, err := h.repos.CreateWorkspace(ctx, storage.Workspace{
 		Name:      fmt.Sprintf("Тестовый цех %s", faker.RandomString([]string{"Север", "Центр", "Восток"})),
 		UserLogin: userLogin,
