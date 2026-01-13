@@ -2,6 +2,9 @@ const apiBase = '/api';
 const statusBadge = document.getElementById('api-status');
 const userGreeting = document.getElementById('user-greeting');
 const authActionButton = document.getElementById('auth-action');
+const devTools = document.getElementById('dev-tools');
+const seedDbBtn = document.getElementById('seed-db');
+const clearDbBtn = document.getElementById('clear-db');
 const workspaceSelect = document.getElementById('workspace-select');
 const refreshWorkspacesBtn = document.getElementById('refresh-workspaces');
 const refreshDevicesBtn = document.getElementById('refresh-devices');
@@ -172,6 +175,19 @@ function mapById(items) {
   }, {});
 }
 
+function resetWorkspaceState() {
+  state.devices = [];
+  state.operators = [];
+  state.tasks = [];
+  state.deviceTypes = [];
+  state.equipmentCharacteristics = [];
+  state.taskTypes = [];
+  state.operatorDevices = [];
+  state.operatorCompetencies = [];
+  state.userTasks = [];
+  renderAll();
+}
+
 function openModal(modal) {
   if (!modal.open) {
     modal.showModal();
@@ -223,6 +239,7 @@ async function loadWorkspaces() {
     opt.textContent = 'Нет данных';
     opt.value = '';
     workspaceSelect.appendChild(opt);
+    resetWorkspaceState();
     return;
   }
   state.workspaces.forEach((workspace) => {
@@ -714,6 +731,9 @@ function updateAuthUI() {
   loginForm.parentElement.style.display = user ? 'none' : 'block';
   registerForm.parentElement.style.display = user ? 'none' : 'block';
   adminPanel.style.display = user?.is_admin ? 'block' : 'none';
+  if (devTools) {
+    devTools.style.display = user?.is_admin ? 'flex' : 'none';
+  }
   if (user) {
     profileSummary.innerHTML = `
       <div>
@@ -1021,6 +1041,44 @@ async function recomputePlan() {
   await loadWorkspaceData();
 }
 
+async function seedDatabase() {
+  if (!state.currentUser?.is_admin) return;
+  const workspaceId = getWorkspaceId();
+  const payload = workspaceId ? { workspace_id: workspaceId } : {};
+  try {
+    await fetchJSON(`${apiBase}/dev/seed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    console.warn(error);
+    alert('Не удалось добавить тестовые данные.');
+    return;
+  }
+  await loadReferenceData();
+  await loadWorkspaces();
+  await loadWorkspaceData();
+  await loadUsers();
+}
+
+async function clearDatabase() {
+  if (!state.currentUser?.is_admin) return;
+  const confirmed = confirm('Очистить базу данных? Это удалит все тестовые данные из системы.');
+  if (!confirmed) return;
+  try {
+    await fetchJSON(`${apiBase}/dev/clear`, { method: 'POST' });
+  } catch (error) {
+    console.warn(error);
+    alert('Не удалось очистить базу данных.');
+    return;
+  }
+  await loadReferenceData();
+  await loadWorkspaces();
+  await loadWorkspaceData();
+  await loadUsers();
+}
+
 navLinks.forEach((link) => {
   link.addEventListener('click', () => setActivePage(link.dataset.page));
 });
@@ -1030,6 +1088,8 @@ refreshDevicesBtn?.addEventListener('click', loadWorkspaceData);
 recomputePlanBtn?.addEventListener('click', recomputePlan);
 authActionButton.addEventListener('click', () => setActivePage('profile'));
 logoutButton.addEventListener('click', handleLogout);
+seedDbBtn?.addEventListener('click', seedDatabase);
+clearDbBtn?.addEventListener('click', clearDatabase);
 
 openWorkspaceModalBtn.addEventListener('click', () => openModal(workspaceModal));
 openTaskModalBtn?.addEventListener('click', () => openModal(taskModal));

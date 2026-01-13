@@ -18,6 +18,19 @@
       </div>
       <div class="header-status">
         <span id="api-status" class="pill">API: неизвестно</span>
+        <div class="dev-tools" id="dev-tools">
+          <button class="icon-button icon-button--outline" id="seed-db" type="button" title="Добавить тестовые данные">
+            +
+          </button>
+          <button
+            class="icon-button icon-button--outline icon-button--danger"
+            id="clear-db"
+            type="button"
+            title="Очистить базу данных"
+          >
+            −
+          </button>
+        </div>
         <div class="user-bar">
           <span id="user-greeting" class="muted">Гость</span>
           <button class="button button--ghost" id="auth-action" type="button">Войти</button>
