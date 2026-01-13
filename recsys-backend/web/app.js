@@ -458,7 +458,7 @@ function buildDateFromMinutes(date, minutesFromStart) {
 function updateGanttNowMarker(container) {
   if (!container) return;
   const header = container.querySelector('.gantt__header');
-  const marker = header?.querySelector('.gantt__now-marker');
+  const marker = container.querySelector('.gantt__now-marker');
   const badge = marker?.querySelector('.gantt__now-badge');
   const line = container.querySelector('.gantt__now-line');
   if (!header || !marker || !badge || !line) return;
@@ -487,6 +487,7 @@ function updateGanttNowMarker(container) {
   const headerHeight = header.offsetHeight;
   const containerHeight = container.scrollHeight;
 
+  container.style.setProperty('--gantt-header-height', `${headerHeight}px`);
   marker.style.left = `${left}px`;
   badge.textContent = formatTime(now);
   line.style.left = `${left}px`;
@@ -502,14 +503,14 @@ function ensureGanttNowMarker(container) {
   if (!container) return;
   const header = container.querySelector('.gantt__header');
   if (!header) return;
-  if (!header.querySelector('.gantt__now-marker')) {
+  if (!container.querySelector('.gantt__now-marker')) {
     const marker = document.createElement('div');
     marker.className = 'gantt__now-marker';
     marker.innerHTML = `
       <span class="gantt__now-badge">--:--</span>
       <span class="gantt__now-arrow"></span>
     `;
-    header.appendChild(marker);
+    container.appendChild(marker);
   }
   if (!container.querySelector('.gantt__now-line')) {
     const line = document.createElement('div');
