@@ -31,6 +31,9 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
+	if err := storage.EnsureSchema(ctx, db); err != nil {
+		log.Fatal(err)
+	}
 
 	repos := storage.NewRepos(db)
 	planner := service.NewPlanner(repos) // пока эвристика-минимум
