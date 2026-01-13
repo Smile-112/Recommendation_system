@@ -8,9 +8,10 @@ import (
 )
 
 type User struct {
-	Login string `json:"login"`
-	ID    int64  `json:"id"`
-	Email string `json:"email"`
+	Login   string `json:"login"`
+	ID      int64  `json:"id"`
+	Email   string `json:"email"`
+	IsAdmin bool   `json:"is_admin"`
 }
 
 type Workspace struct {
@@ -113,7 +114,7 @@ type UserTask struct {
 }
 
 func (r *Repos) ListUsers(ctx context.Context) ([]User, error) {
-	rows, err := r.DB.Query(ctx, `SELECT user_login, user_id, user_email FROM "user" ORDER BY user_login`)
+	rows, err := r.DB.Query(ctx, `SELECT user_login, user_id, user_email, is_admin FROM "user" ORDER BY user_login`)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +123,7 @@ func (r *Repos) ListUsers(ctx context.Context) ([]User, error) {
 	var res []User
 	for rows.Next() {
 		var u User
-		if err := rows.Scan(&u.Login, &u.ID, &u.Email); err != nil {
+		if err := rows.Scan(&u.Login, &u.ID, &u.Email, &u.IsAdmin); err != nil {
 			return nil, err
 		}
 		res = append(res, u)
@@ -132,18 +133,38 @@ func (r *Repos) ListUsers(ctx context.Context) ([]User, error) {
 
 func (r *Repos) GetUser(ctx context.Context, login string) (User, error) {
 	var u User
-	err := r.DB.QueryRow(ctx, `SELECT user_login, user_id, user_email FROM "user" WHERE user_login = $1`, login).
-		Scan(&u.Login, &u.ID, &u.Email)
+	err := r.DB.QueryRow(ctx, `SELECT user_login, user_id, user_email, is_admin FROM "user" WHERE user_login = $1`, login).
+		Scan(&u.Login, &u.ID, &u.Email, &u.IsAdmin)
 	return u, err
+}
+
+func (r *Repos) GetUserAuth(ctx context.Context, login string) (User, string, error) {
+	var u User
+	var passwordHash string
+	err := r.DB.QueryRow(ctx, `SELECT user_login, user_id, user_email, is_admin, user_password FROM "user" WHERE user_login = $1`, login).
+		Scan(&u.Login, &u.ID, &u.Email, &u.IsAdmin, &passwordHash)
+	return u, passwordHash, err
+}
+
+func (r *Repos) CountUsers(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.DB.QueryRow(ctx, `SELECT COUNT(*) FROM "user"`).Scan(&count)
+	return count, err
+}
+
+func (r *Repos) NextUserID(ctx context.Context) (int64, error) {
+	var nextID int64
+	err := r.DB.QueryRow(ctx, `SELECT COALESCE(MAX(user_id), 0) + 1 FROM "user"`).Scan(&nextID)
+	return nextID, err
 }
 
 func (r *Repos) CreateUser(ctx context.Context, u User, passwordHash string) (int64, error) {
 	var id int64
 	err := r.DB.QueryRow(ctx, `
-		INSERT INTO "user" (user_login, user_id, user_password, user_email)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO "user" (user_login, user_id, user_password, user_email, is_admin)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING user_id
-	`, u.Login, u.ID, passwordHash, u.Email).Scan(&id)
+	`, u.Login, u.ID, passwordHash, u.Email, u.IsAdmin).Scan(&id)
 	return id, err
 }
 
@@ -153,17 +174,19 @@ func (r *Repos) UpdateUser(ctx context.Context, u User, passwordHash *string) er
 			UPDATE "user"
 			SET user_id = $2,
 				user_password = $3,
-				user_email = $4
+				user_email = $4,
+				is_admin = $5
 			WHERE user_login = $1
-		`, u.Login, u.ID, *passwordHash, u.Email)
+		`, u.Login, u.ID, *passwordHash, u.Email, u.IsAdmin)
 		return err
 	}
 	_, err := r.DB.Exec(ctx, `
 		UPDATE "user"
 		SET user_id = $2,
-			user_email = $3
+			user_email = $3,
+			is_admin = $4
 		WHERE user_login = $1
-	`, u.Login, u.ID, u.Email)
+	`, u.Login, u.ID, u.Email, u.IsAdmin)
 	return err
 }
 

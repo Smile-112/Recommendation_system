@@ -1,5 +1,7 @@
 const apiBase = '/api';
 const statusBadge = document.getElementById('api-status');
+const userGreeting = document.getElementById('user-greeting');
+const authActionButton = document.getElementById('auth-action');
 const workspaceSelect = document.getElementById('workspace-select');
 const refreshWorkspacesBtn = document.getElementById('refresh-workspaces');
 const refreshDevicesBtn = document.getElementById('refresh-devices');
@@ -18,6 +20,17 @@ const equipmentList = document.getElementById('equipment-list');
 const operatorsList = document.getElementById('operators-list');
 const operatorsGantt = document.getElementById('operators-gantt');
 const homeDateLabel = document.getElementById('home-date');
+const profileSummary = document.getElementById('profile-summary');
+const loginForm = document.getElementById('login-form');
+const registerForm = document.getElementById('register-form');
+const logoutButton = document.getElementById('logout-button');
+const usersList = document.getElementById('users-list');
+const adminPanel = document.getElementById('admin-panel');
+const deviceTypeForm = document.getElementById('device-type-form');
+const taskTypeForm = document.getElementById('task-type-form');
+const deviceTypesList = document.getElementById('device-types-list');
+const taskTypesList = document.getElementById('task-types-list');
+const equipmentCharacteristicSelect = document.getElementById('equipment-characteristic-select');
 
 const workspaceModal = document.getElementById('workspace-modal');
 const taskModal = document.getElementById('task-modal');
@@ -45,18 +58,26 @@ const state = {
   operators: [],
   tasks: [],
   deviceTypes: [],
+  equipmentCharacteristics: [],
   deviceStates: [],
   priorities: [],
   taskTypes: [],
   operatorDevices: [],
   operatorCompetencies: [],
-  userTasks: []
+  userTasks: [],
+  currentUser: null
 };
 
 const ganttHours = Array.from({ length: 14 }, (_, i) => 9 + i);
+const storedToken = localStorage.getItem('authToken');
+let authToken = storedToken || '';
 
 async function fetchJSON(url, options) {
-  const response = await fetch(url, options);
+  const headers = new Headers(options?.headers || {});
+  if (authToken) {
+    headers.set('Authorization', `Bearer ${authToken}`);
+  }
+  const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
     const message = await response.text();
     throw new Error(message || 'Ошибка запроса');
@@ -94,6 +115,50 @@ function parseDateTimeInput(value) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatPhoneInput(value) {
+  const digits = value.replace(/\D/g, '').replace(/^8/, '7');
+  const cleaned = digits.startsWith('7') ? digits.slice(1) : digits;
+  const parts = [
+    cleaned.slice(0, 3),
+    cleaned.slice(3, 6),
+    cleaned.slice(6, 8),
+    cleaned.slice(8, 10)
+  ].filter(Boolean);
+  let formatted = '+7';
+  if (parts[0]) formatted += ` (${parts[0]}`;
+  if (parts[0] && parts[0].length === 3) formatted += ')';
+  if (parts[1]) formatted += ` ${parts[1]}`;
+  if (parts[2]) formatted += `-${parts[2]}`;
+  if (parts[3]) formatted += `-${parts[3]}`;
+  return formatted;
+}
+
+function formatDocNumber(value, pad = false) {
+  const digits = value.replace(/\D/g, '').slice(0, 4);
+  if (!digits) return '';
+  const padded = pad ? digits.padStart(4, '0') : digits;
+  return `DOC-${padded}`;
+}
+
+function applyInputMasks() {
+  const phoneInput = operatorForm?.querySelector('input[name="phone_number"]');
+  if (phoneInput) {
+    phoneInput.addEventListener('input', () => {
+      phoneInput.value = formatPhoneInput(phoneInput.value);
+    });
+  }
+
+  const docInput = taskForm?.querySelector('input[name="doc_num"]');
+  if (docInput) {
+    docInput.addEventListener('input', () => {
+      docInput.value = formatDocNumber(docInput.value);
+    });
+    docInput.addEventListener('blur', () => {
+      docInput.value = formatDocNumber(docInput.value, true);
+    });
+  }
 }
 
 function getWorkspaceId() {
@@ -150,7 +215,8 @@ function setActivePage(page) {
 }
 
 async function loadWorkspaces() {
-  state.workspaces = await fetchJSON(`${apiBase}/workspaces/`);
+  const query = state.currentUser ? `?user_login=${encodeURIComponent(state.currentUser.login)}` : '';
+  state.workspaces = await fetchJSON(`${apiBase}/workspaces/${query}`);
   workspaceSelect.innerHTML = '';
   if (!state.workspaces.length) {
     const opt = document.createElement('option');
@@ -180,6 +246,7 @@ async function loadWorkspaceData() {
     operators,
     tasks,
     deviceTypes,
+    equipmentCharacteristics,
     taskTypes,
     operatorDevices,
     operatorCompetencies,
@@ -189,6 +256,7 @@ async function loadWorkspaceData() {
     fetchJSON(`${apiBase}/workspaces/${workspaceId}/operators`),
     fetchJSON(`${apiBase}/workspaces/${workspaceId}/device-tasks`),
     fetchJSON(`${apiBase}/workspaces/${workspaceId}/device-types`),
+    fetchJSON(`${apiBase}/workspaces/${workspaceId}/equipment-characteristics`),
     fetchJSON(`${apiBase}/workspaces/${workspaceId}/device-task-types`),
     fetchJSON(`${apiBase}/workspaces/${workspaceId}/operator-devices`),
     fetchJSON(`${apiBase}/workspaces/${workspaceId}/operator-competencies`),
@@ -198,6 +266,7 @@ async function loadWorkspaceData() {
   state.operators = operators;
   state.tasks = tasks;
   state.deviceTypes = deviceTypes;
+  state.equipmentCharacteristics = equipmentCharacteristics;
   state.taskTypes = taskTypes;
   state.operatorDevices = operatorDevices;
   state.operatorCompetencies = operatorCompetencies;
@@ -338,6 +407,8 @@ function renderHomeStats() {
 function renderUpcomingTasks() {
   const operatorsById = mapById(state.operators);
   const devicesById = mapById(state.devices);
+  const taskTypesById = mapById(state.taskTypes);
+  const prioritiesById = mapById(state.priorities);
   const upcoming = state.tasks
     .filter((task) => task.plan_start)
     .sort((a, b) => new Date(a.plan_start) - new Date(b.plan_start))
@@ -360,12 +431,17 @@ function renderUpcomingTasks() {
     .map((task) => {
       const operator = operatorsById[task.operator_id];
       const device = devicesById[task.device_id];
+      const taskType = taskTypesById[task.device_task_type_id];
+      const priority = prioritiesById[task.priority_id];
       return `
         <div class="table__row">
           <div>
             <strong>${task.name}</strong><br />
             <span class="muted">${operator ? operator.full_name : 'Оператор не назначен'} ·
             ${device ? device.name : 'Оборудование не выбрано'}</span>
+            <div class="muted">Тип: ${taskType ? taskType.name : '—'} · Приоритет: ${
+        priority ? priority.name : '—'
+      }</div>
           </div>
           <div>${formatTime(task.plan_start)}</div>
           <div>${formatTime(task.plan_end)}</div>
@@ -385,9 +461,12 @@ function renderHomeGantt() {
   });
   buildGantt(homeGantt, todayTasks, (task) => {
     const operator = state.operators.find((item) => item.id === task.operator_id);
+    const taskType = state.taskTypes.find((item) => item.id === task.device_task_type_id);
     return `
       ${task.name}
-      <small>${operator ? operator.full_name : 'Оператор не назначен'}</small>
+      <small>${operator ? operator.full_name : 'Оператор не назначен'} · ${
+      taskType ? taskType.name : 'Тип не указан'
+    }</small>
     `;
   });
 }
@@ -520,6 +599,12 @@ function renderSelects() {
   populateSelect(taskDeviceSelect, state.devices, (d) => `${d.name} (#${d.id})`);
   populateSelect(deviceTypeSelect, state.deviceTypes, (t) => `${t.name} (#${t.id})`);
   populateSelect(deviceStateSelect, state.deviceStates, (s) => `${s.name} (#${s.id})`);
+  populateSelect(
+    equipmentCharacteristicSelect,
+    state.equipmentCharacteristics,
+    (c) => `${c.name} (#${c.id})`,
+    'Выберите характеристику...'
+  );
 }
 
 function renderTasksPage() {
@@ -532,13 +617,70 @@ function renderTasksPage() {
   buildGantt(tasksGantt, tasksForDate, (task) => {
     const operator = state.operators.find((item) => item.id === task.operator_id);
     const device = state.devices.find((item) => item.id === task.device_id);
+    const taskType = state.taskTypes.find((item) => item.id === task.device_task_type_id);
     return `
       ${task.name}
       <small>${operator ? operator.full_name : 'Оператор не назначен'} · ${
       device ? device.name : 'Оборудование не выбрано'
-    }</small>
+    } · ${taskType ? taskType.name : 'Тип не указан'}</small>
     `;
   });
+}
+
+function renderReferenceTables() {
+  const characteristicsById = mapById(state.equipmentCharacteristics);
+
+  if (!state.deviceTypes.length) {
+    deviceTypesList.innerHTML = '<div class="gantt__empty">Типы оборудования не добавлены</div>';
+  } else {
+    const header = `
+      <div class="table__row">
+        <strong>Название</strong>
+        <strong>Характеристика</strong>
+        <strong>Действия</strong>
+      </div>
+    `;
+    const rows = state.deviceTypes
+      .map(
+        (item) => `
+        <div class="table__row">
+          <div><strong>${item.name}</strong><br /><span class="muted">#${item.id}</span></div>
+          <div>${characteristicsById[item.equipment_characteristic_id]?.name || '—'}</div>
+          <div class="table__actions">
+            <button class="button button--ghost" data-delete-device-type="${item.id}" type="button">Удалить</button>
+          </div>
+        </div>
+      `
+      )
+      .join('');
+    deviceTypesList.innerHTML = header + rows;
+  }
+
+  if (!state.taskTypes.length) {
+    taskTypesList.innerHTML = '<div class="gantt__empty">Типы заданий не добавлены</div>';
+  } else {
+    const header = `
+      <div class="table__row">
+        <strong>Название</strong>
+        <strong>Workspace</strong>
+        <strong>Действия</strong>
+      </div>
+    `;
+    const rows = state.taskTypes
+      .map(
+        (item) => `
+        <div class="table__row">
+          <div><strong>${item.name}</strong><br /><span class="muted">#${item.id}</span></div>
+          <div>${item.workspace_id || '—'}</div>
+          <div class="table__actions">
+            <button class="button button--ghost" data-delete-task-type="${item.id}" type="button">Удалить</button>
+          </div>
+        </div>
+      `
+      )
+      .join('');
+    taskTypesList.innerHTML = header + rows;
+  }
 }
 
 function renderAll() {
@@ -550,10 +692,163 @@ function renderAll() {
   renderOperators();
   renderOperatorsGantt();
   renderTasksPage();
+  renderReferenceTables();
+}
+
+function saveAuth(token, user) {
+  authToken = token || '';
+  if (authToken) {
+    localStorage.setItem('authToken', authToken);
+  } else {
+    localStorage.removeItem('authToken');
+  }
+  state.currentUser = user;
+  updateAuthUI();
+}
+
+function updateAuthUI() {
+  const user = state.currentUser;
+  userGreeting.textContent = user ? `${user.login}` : 'Гость';
+  authActionButton.textContent = user ? 'Профиль' : 'Войти';
+  logoutButton.style.display = user ? 'inline-flex' : 'none';
+  loginForm.parentElement.style.display = user ? 'none' : 'block';
+  registerForm.parentElement.style.display = user ? 'none' : 'block';
+  adminPanel.style.display = user?.is_admin ? 'block' : 'none';
+  if (user) {
+    profileSummary.innerHTML = `
+      <div>
+        <strong>${user.login}</strong>
+        <div class="muted">${user.email}</div>
+      </div>
+      <div class="badge ${user.is_admin ? 'badge--admin' : ''}">
+        ${user.is_admin ? 'Администратор' : 'Пользователь'}
+      </div>
+    `;
+  } else {
+    profileSummary.innerHTML = '<p class="muted">Войдите, чтобы увидеть данные профиля.</p>';
+  }
+  prefillUserLoginInputs();
+}
+
+function prefillUserLoginInputs() {
+  if (!state.currentUser) return;
+  document.querySelectorAll('input[name="user_login"]').forEach((input) => {
+    if (!input.value) {
+      input.value = state.currentUser.login;
+    }
+  });
+}
+
+async function loadCurrentUser() {
+  if (!authToken) {
+    updateAuthUI();
+    return;
+  }
+  try {
+    const user = await fetchJSON(`${apiBase}/auth/me`);
+    state.currentUser = user;
+    updateAuthUI();
+  } catch (error) {
+    console.warn(error);
+    saveAuth('', null);
+  }
+}
+
+async function handleLogin(event) {
+  event.preventDefault();
+  if (!loginForm.reportValidity()) return;
+  const formData = new FormData(loginForm);
+  const payload = Object.fromEntries(formData.entries());
+  const res = await fetchJSON(`${apiBase}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  saveAuth(res.token, res.user);
+  loginForm.reset();
+  await loadWorkspaces();
+  await loadWorkspaceData();
+  await loadUsers();
+}
+
+async function handleRegister(event) {
+  event.preventDefault();
+  if (!registerForm.reportValidity()) return;
+  const formData = new FormData(registerForm);
+  const payload = Object.fromEntries(formData.entries());
+  const res = await fetchJSON(`${apiBase}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  saveAuth(res.token, res.user);
+  registerForm.reset();
+  await loadWorkspaces();
+  await loadWorkspaceData();
+  await loadUsers();
+}
+
+async function handleLogout() {
+  try {
+    await fetchJSON(`${apiBase}/auth/logout`, { method: 'POST' });
+  } catch (error) {
+    console.warn(error);
+  }
+  saveAuth('', null);
+  await loadWorkspaces();
+  await loadWorkspaceData();
+}
+
+async function loadUsers() {
+  if (!state.currentUser?.is_admin) return;
+  let users = [];
+  try {
+    users = await fetchJSON(`${apiBase}/users/`);
+  } catch (error) {
+    console.warn(error);
+    usersList.innerHTML = '<div class="gantt__empty">Нет доступа к списку пользователей</div>';
+    return;
+  }
+  if (!users.length) {
+    usersList.innerHTML = '<div class="gantt__empty">Пользователи не найдены</div>';
+    return;
+  }
+  const header = `
+    <div class="table__row">
+      <strong>Пользователь</strong>
+      <strong>Роль</strong>
+      <strong>Действия</strong>
+    </div>
+  `;
+  const rows = users
+    .map((user) => {
+      const roleLabel = user.is_admin ? 'Администратор' : 'Пользователь';
+      return `
+        <div class="table__row">
+          <div>
+            <strong>${user.login}</strong><br />
+            <span class="muted">${user.email}</span>
+          </div>
+          <div>${roleLabel}</div>
+          <div class="table__actions">
+            <button class="button button--ghost" type="button" data-toggle-admin="${user.login}">
+              ${user.is_admin ? 'Снять права' : 'Сделать админом'}
+            </button>
+            <button class="button button--ghost" type="button" data-delete-user="${user.login}">
+              Удалить
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+  usersList.innerHTML = header + rows;
+  usersList.dataset.users = JSON.stringify(users);
 }
 
 async function createWorkspace(event) {
   event.preventDefault();
+  if (!workspaceForm.reportValidity()) return;
   const formData = new FormData(workspaceForm);
   const payload = Object.fromEntries(formData.entries());
   await fetchJSON(`${apiBase}/workspaces/`, {
@@ -570,6 +865,7 @@ async function createTask(event) {
   event.preventDefault();
   const workspaceId = getWorkspaceId();
   if (!workspaceId) return;
+  if (!taskForm.reportValidity()) return;
   const formData = new FormData(taskForm);
   const payload = Object.fromEntries(formData.entries());
   payload.duration_min = Number(payload.duration_min || 0);
@@ -584,6 +880,10 @@ async function createTask(event) {
   payload.deadline = parseDateTimeInput(payload.deadline);
   payload.plan_start = parseDateTimeInput(payload.plan_start);
   payload.plan_end = parseDateTimeInput(payload.plan_end);
+  if (payload.plan_start && payload.plan_end && payload.plan_end < payload.plan_start) {
+    alert('Плановое завершение не может быть раньше начала.');
+    return;
+  }
   await fetchJSON(`${apiBase}/workspaces/${workspaceId}/device-tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -598,6 +898,7 @@ async function createOperator(event) {
   event.preventDefault();
   const workspaceId = getWorkspaceId();
   if (!workspaceId) return;
+  if (!operatorForm.reportValidity()) return;
   const formData = new FormData(operatorForm);
   const payload = Object.fromEntries(formData.entries());
   await fetchJSON(`${apiBase}/workspaces/${workspaceId}/operators`, {
@@ -614,6 +915,7 @@ async function createDevice(event) {
   event.preventDefault();
   const workspaceId = getWorkspaceId();
   if (!workspaceId) return;
+  if (!deviceForm.reportValidity()) return;
   const formData = new FormData(deviceForm);
   const payload = Object.fromEntries(formData.entries());
   payload.device_type_id = Number(payload.device_type_id || 0);
@@ -627,6 +929,85 @@ async function createDevice(event) {
   closeModal(deviceModal);
   deviceForm.reset();
   await loadWorkspaceData();
+}
+
+async function createDeviceType(event) {
+  event.preventDefault();
+  const workspaceId = getWorkspaceId();
+  if (!workspaceId) return;
+  if (!deviceTypeForm.reportValidity()) return;
+  const formData = new FormData(deviceTypeForm);
+  const payload = Object.fromEntries(formData.entries());
+  payload.equipment_characteristic_id = Number(payload.equipment_characteristic_id || 0);
+  if (!payload.equipment_characteristic_id) {
+    alert('Выберите характеристику оборудования.');
+    return;
+  }
+  await fetchJSON(`${apiBase}/workspaces/${workspaceId}/device-types`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  deviceTypeForm.reset();
+  await loadWorkspaceData();
+}
+
+async function createTaskType(event) {
+  event.preventDefault();
+  const workspaceId = getWorkspaceId();
+  if (!workspaceId) return;
+  if (!taskTypeForm.reportValidity()) return;
+  const formData = new FormData(taskTypeForm);
+  const payload = Object.fromEntries(formData.entries());
+  await fetchJSON(`${apiBase}/workspaces/${workspaceId}/device-task-types`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  taskTypeForm.reset();
+  await loadWorkspaceData();
+}
+
+async function handleReferenceAction(event) {
+  const deleteDeviceTypeId = event.target.dataset.deleteDeviceType;
+  const deleteTaskTypeId = event.target.dataset.deleteTaskType;
+  if (deleteDeviceTypeId) {
+    await fetchJSON(`${apiBase}/device-types/${deleteDeviceTypeId}`, { method: 'DELETE' });
+    await loadWorkspaceData();
+    return;
+  }
+  if (deleteTaskTypeId) {
+    await fetchJSON(`${apiBase}/device-task-types/${deleteTaskTypeId}`, { method: 'DELETE' });
+    await loadWorkspaceData();
+  }
+}
+
+async function handleAdminAction(event) {
+  const toggleLogin = event.target.dataset.toggleAdmin;
+  const deleteLogin = event.target.dataset.deleteUser;
+  if (!toggleLogin && !deleteLogin) return;
+  const users = JSON.parse(usersList.dataset.users || '[]');
+  const user = users.find((item) => item.login === toggleLogin || item.login === deleteLogin);
+  if (!user) return;
+  if (toggleLogin) {
+    const payload = {
+      login: user.login,
+      id: user.id,
+      email: user.email,
+      is_admin: !user.is_admin
+    };
+    await fetchJSON(`${apiBase}/users/${user.login}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    await loadUsers();
+    return;
+  }
+  if (deleteLogin) {
+    await fetchJSON(`${apiBase}/users/${user.login}`, { method: 'DELETE' });
+    await loadUsers();
+  }
 }
 
 async function recomputePlan() {
@@ -647,6 +1028,8 @@ navLinks.forEach((link) => {
 refreshWorkspacesBtn.addEventListener('click', loadWorkspaces);
 refreshDevicesBtn?.addEventListener('click', loadWorkspaceData);
 recomputePlanBtn?.addEventListener('click', recomputePlan);
+authActionButton.addEventListener('click', () => setActivePage('profile'));
+logoutButton.addEventListener('click', handleLogout);
 
 openWorkspaceModalBtn.addEventListener('click', () => openModal(workspaceModal));
 openTaskModalBtn?.addEventListener('click', () => openModal(taskModal));
@@ -664,6 +1047,13 @@ workspaceForm.addEventListener('submit', createWorkspace);
 taskForm.addEventListener('submit', createTask);
 operatorForm.addEventListener('submit', createOperator);
 deviceForm.addEventListener('submit', createDevice);
+deviceTypeForm.addEventListener('submit', createDeviceType);
+taskTypeForm.addEventListener('submit', createTaskType);
+loginForm.addEventListener('submit', handleLogin);
+registerForm.addEventListener('submit', handleRegister);
+deviceTypesList.addEventListener('click', handleReferenceAction);
+taskTypesList.addEventListener('click', handleReferenceAction);
+usersList.addEventListener('click', handleAdminAction);
 
 workspaceSelect.addEventListener('change', loadWorkspaceData);
 tasksDateInput.addEventListener('change', renderTasksPage);
@@ -671,9 +1061,12 @@ tasksDateInput.addEventListener('change', renderTasksPage);
 tasksDateInput.value = toLocalInputValue(new Date());
 
 checkHealth();
-loadReferenceData()
+applyInputMasks();
+loadCurrentUser()
+  .then(loadReferenceData)
   .then(loadWorkspaces)
   .then(loadWorkspaceData)
+  .then(loadUsers)
   .catch((error) => {
     console.error(error);
   });
