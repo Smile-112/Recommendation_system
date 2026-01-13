@@ -1,0 +1,2158 @@
+basePath: /
+definitions:
+  httpapi.DeviceRequest:
+    properties:
+      add_in_rec_system:
+        type: boolean
+      device_state_id:
+        type: integer
+      device_type_id:
+        type: integer
+      name:
+        type: string
+      photo_url:
+        type: string
+    type: object
+  httpapi.DeviceTaskDTO:
+    properties:
+      deadline:
+        type: string
+      device_id:
+        type: integer
+      device_task_type_id:
+        type: integer
+      doc_num:
+        type: string
+      duration_min:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      need_operator:
+        type: boolean
+      operator_id:
+        type: integer
+      plan_end:
+        type: string
+      plan_start:
+        type: string
+      priority_id:
+        type: integer
+      setup_time_min:
+        type: integer
+      unload_time_min:
+        type: integer
+      workspace_id:
+        type: integer
+    type: object
+  httpapi.DeviceTaskRequest:
+    properties:
+      add_in_rec_system:
+        type: boolean
+      completion_mark:
+        type: string
+      deadline:
+        type: string
+      device_id:
+        type: integer
+      device_task_type_id:
+        type: integer
+      doc_num:
+        type: string
+      duration_min:
+        type: integer
+      name:
+        type: string
+      need_operator:
+        type: boolean
+      operator_id:
+        type: integer
+      photo_url:
+        type: string
+      plan_end:
+        type: string
+      plan_start:
+        type: string
+      priority_id:
+        type: integer
+      setup_time_min:
+        type: integer
+      unload_time_min:
+        type: integer
+    type: object
+  httpapi.DeviceTaskTypeRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  httpapi.DeviceTypeRequest:
+    properties:
+      equipment_characteristic_id:
+        type: integer
+      name:
+        type: string
+    type: object
+  httpapi.EquipmentCharacteristicRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  httpapi.NameRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  httpapi.OperatorCompetencyRequest:
+    properties:
+      device_type_id:
+        type: integer
+      operator_id:
+        type: integer
+    type: object
+  httpapi.OperatorDeviceRequest:
+    properties:
+      device_id:
+        type: integer
+      operator_id:
+        type: integer
+    type: object
+  httpapi.OperatorRequest:
+    properties:
+      full_name:
+        type: string
+      phone_number:
+        type: string
+      user_login:
+        type: string
+    type: object
+  httpapi.UserRequest:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      login:
+        type: string
+      password:
+        type: string
+    type: object
+  httpapi.UserTaskRequest:
+    properties:
+      completion_mark:
+        type: boolean
+      device_task_id:
+        type: integer
+      end_time:
+        type: string
+      name:
+        type: string
+      operator_id:
+        type: integer
+      priority:
+        type: integer
+      start_time:
+        type: string
+    type: object
+  httpapi.WorkspaceRequest:
+    properties:
+      name:
+        type: string
+      user_login:
+        type: string
+    type: object
+  service.RecomputeRequest:
+    properties:
+      workspace_id:
+        type: integer
+    type: object
+  service.RecomputeResult:
+    properties:
+      unscheduled_ids:
+        items:
+          type: integer
+        type: array
+      updated:
+        type: integer
+    type: object
+  storage.Device:
+    properties:
+      add_in_rec_system:
+        type: boolean
+      device_state_id:
+        type: integer
+      device_type_id:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      photo_url:
+        type: string
+      workspace_id:
+        type: integer
+    type: object
+  storage.DeviceState:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  storage.DeviceTaskType:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      workspace_id:
+        type: integer
+    type: object
+  storage.DeviceType:
+    properties:
+      equipment_characteristic_id:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      workspace_id:
+        type: integer
+    type: object
+  storage.EquipmentCharacteristic:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      workspace_id:
+        type: integer
+    type: object
+  storage.Operator:
+    properties:
+      full_name:
+        type: string
+      id:
+        type: integer
+      phone_number:
+        type: string
+      user_login:
+        type: string
+      workspace_id:
+        type: integer
+    type: object
+  storage.OperatorCompetency:
+    properties:
+      device_type_id:
+        type: integer
+      id:
+        type: integer
+      operator_id:
+        type: integer
+      workspace_id:
+        type: integer
+    type: object
+  storage.OperatorDevice:
+    properties:
+      device_id:
+        type: integer
+      id:
+        type: integer
+      operator_id:
+        type: integer
+    type: object
+  storage.Priority:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  storage.User:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      login:
+        type: string
+    type: object
+  storage.UserTask:
+    properties:
+      completion_mark:
+        type: boolean
+      device_task_id:
+        type: integer
+      end_time:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      operator_id:
+        type: integer
+      priority:
+        type: integer
+      start_time:
+        type: string
+      workspace_id:
+        type: integer
+    type: object
+  storage.Workspace:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      user_login:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Система рекомендаций загрузки производственного оборудования
+  title: Recommendation System API
+  version: "1.0"
+paths:
+  /api/device-states:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.DeviceState'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список состояний оборудования
+      tags:
+      - device_states
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device state payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.NameRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать состояние оборудования
+      tags:
+      - device_states
+  /api/device-states/{stateId}:
+    delete:
+      parameters:
+      - description: State ID
+        in: path
+        name: stateId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить состояние оборудования
+      tags:
+      - device_states
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: State ID
+        in: path
+        name: stateId
+        required: true
+        type: integer
+      - description: Device state payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.NameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить состояние оборудования
+      tags:
+      - device_states
+  /api/device-task-types/{deviceTaskTypeId}:
+    delete:
+      parameters:
+      - description: Device task type ID
+        in: path
+        name: deviceTaskTypeId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить тип задачи оборудования
+      tags:
+      - device_task_types
+    get:
+      parameters:
+      - description: Device task type ID
+        in: path
+        name: deviceTaskTypeId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/storage.DeviceTaskType'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Получить тип задачи оборудования
+      tags:
+      - device_task_types
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device task type ID
+        in: path
+        name: deviceTaskTypeId
+        required: true
+        type: integer
+      - description: Workspace ID
+        in: query
+        name: workspace_id
+        required: true
+        type: integer
+      - description: Device task type payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.DeviceTaskTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить тип задачи оборудования
+      tags:
+      - device_task_types
+  /api/device-tasks/{deviceTaskId}:
+    delete:
+      parameters:
+      - description: Device task ID
+        in: path
+        name: deviceTaskId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить задачу оборудования
+      tags:
+      - device_tasks
+    get:
+      parameters:
+      - description: Device task ID
+        in: path
+        name: deviceTaskId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.DeviceTaskDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Получить задачу оборудования
+      tags:
+      - device_tasks
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device task ID
+        in: path
+        name: deviceTaskId
+        required: true
+        type: integer
+      - description: Workspace ID
+        in: query
+        name: workspace_id
+        required: true
+        type: integer
+      - description: Device task payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.DeviceTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить задачу оборудования
+      tags:
+      - device_tasks
+  /api/device-types/{deviceTypeId}:
+    delete:
+      parameters:
+      - description: Device type ID
+        in: path
+        name: deviceTypeId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить тип оборудования
+      tags:
+      - device_types
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device type ID
+        in: path
+        name: deviceTypeId
+        required: true
+        type: integer
+      - description: Workspace ID
+        in: query
+        name: workspace_id
+        required: true
+        type: integer
+      - description: Device type payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.DeviceTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить тип оборудования
+      tags:
+      - device_types
+  /api/devices/{deviceId}:
+    delete:
+      parameters:
+      - description: Device ID
+        in: path
+        name: deviceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить оборудование
+      tags:
+      - devices
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Device ID
+        in: path
+        name: deviceId
+        required: true
+        type: integer
+      - description: Workspace ID
+        in: query
+        name: workspace_id
+        required: true
+        type: integer
+      - description: Device payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.DeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить оборудование
+      tags:
+      - devices
+  /api/equipment-characteristics/{characteristicId}:
+    delete:
+      parameters:
+      - description: Characteristic ID
+        in: path
+        name: characteristicId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить характеристику оборудования
+      tags:
+      - equipment_characteristics
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Characteristic ID
+        in: path
+        name: characteristicId
+        required: true
+        type: integer
+      - description: Workspace ID
+        in: query
+        name: workspace_id
+        required: true
+        type: integer
+      - description: Characteristic payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.EquipmentCharacteristicRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить характеристику оборудования
+      tags:
+      - equipment_characteristics
+  /api/operator-competencies/{competencyId}:
+    delete:
+      parameters:
+      - description: Competency ID
+        in: path
+        name: competencyId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить компетенцию оператора
+      tags:
+      - operator_competencies
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Competency ID
+        in: path
+        name: competencyId
+        required: true
+        type: integer
+      - description: Workspace ID
+        in: query
+        name: workspace_id
+        required: true
+        type: integer
+      - description: Competency payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.OperatorCompetencyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить компетенцию оператора
+      tags:
+      - operator_competencies
+  /api/operator-devices/{operatorDeviceId}:
+    delete:
+      parameters:
+      - description: Operator device ID
+        in: path
+        name: operatorDeviceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить связку оператор-оборудование
+      tags:
+      - operator_devices
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Operator device ID
+        in: path
+        name: operatorDeviceId
+        required: true
+        type: integer
+      - description: Operator device payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.OperatorDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить связку оператор-оборудование
+      tags:
+      - operator_devices
+  /api/operators/{operatorId}:
+    delete:
+      parameters:
+      - description: Operator ID
+        in: path
+        name: operatorId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить оператора
+      tags:
+      - operators
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Operator ID
+        in: path
+        name: operatorId
+        required: true
+        type: integer
+      - description: Workspace ID
+        in: query
+        name: workspace_id
+        required: true
+        type: integer
+      - description: Operator payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.OperatorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить оператора
+      tags:
+      - operators
+  /api/plans/recompute:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: workspace_id
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/service.RecomputeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.RecomputeResult'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Пересчитать рекомендации/план по workspace
+      tags:
+      - planning
+  /api/priorities:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.Priority'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список приоритетов
+      tags:
+      - priorities
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Priority payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.NameRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать приоритет
+      tags:
+      - priorities
+  /api/priorities/{priorityId}:
+    delete:
+      parameters:
+      - description: Priority ID
+        in: path
+        name: priorityId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить приоритет
+      tags:
+      - priorities
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Priority ID
+        in: path
+        name: priorityId
+        required: true
+        type: integer
+      - description: Priority payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.NameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить приоритет
+      tags:
+      - priorities
+  /api/user-tasks/{userTaskId}:
+    delete:
+      parameters:
+      - description: User task ID
+        in: path
+        name: userTaskId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить пользовательскую задачу
+      tags:
+      - user_tasks
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: User task ID
+        in: path
+        name: userTaskId
+        required: true
+        type: integer
+      - description: Workspace ID
+        in: query
+        name: workspace_id
+        required: true
+        type: integer
+      - description: User task payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.UserTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить пользовательскую задачу
+      tags:
+      - user_tasks
+  /api/users:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.User'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список пользователей
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.UserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать пользователя
+      tags:
+      - users
+  /api/users/{login}:
+    delete:
+      parameters:
+      - description: User login
+        in: path
+        name: login
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить пользователя
+      tags:
+      - users
+    get:
+      parameters:
+      - description: User login
+        in: path
+        name: login
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/storage.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Получить пользователя по логину
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: User login
+        in: path
+        name: login
+        required: true
+        type: string
+      - description: User payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.UserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить пользователя
+      tags:
+      - users
+  /api/workspaces:
+    get:
+      parameters:
+      - description: User login
+        in: query
+        name: user_login
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.Workspace'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список рабочих пространств
+      tags:
+      - workspaces
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.WorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать рабочее пространство
+      tags:
+      - workspaces
+  /api/workspaces/{workspaceId}:
+    delete:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить рабочее пространство
+      tags:
+      - workspaces
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/storage.Workspace'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Получить рабочее пространство
+      tags:
+      - workspaces
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      - description: Workspace payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.WorkspaceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить рабочее пространство
+      tags:
+      - workspaces
+  /api/workspaces/{workspaceId}/device-task-types:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.DeviceTaskType'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список типов задач оборудования
+      tags:
+      - device_task_types
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      - description: Device task type payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.DeviceTaskTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать тип задачи оборудования
+      tags:
+      - device_task_types
+  /api/workspaces/{workspaceId}/device-tasks:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/httpapi.DeviceTaskDTO'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список заданий по workspace
+      tags:
+      - device_task
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      - description: Device task payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.DeviceTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать задачу оборудования
+      tags:
+      - device_tasks
+  /api/workspaces/{workspaceId}/device-types:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.DeviceType'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список типов оборудования
+      tags:
+      - device_types
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      - description: Device type payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.DeviceTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать тип оборудования
+      tags:
+      - device_types
+  /api/workspaces/{workspaceId}/devices:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.Device'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список оборудования
+      tags:
+      - devices
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      - description: Device payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.DeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать оборудование
+      tags:
+      - devices
+  /api/workspaces/{workspaceId}/equipment-characteristics:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.EquipmentCharacteristic'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список характеристик оборудования
+      tags:
+      - equipment_characteristics
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      - description: Characteristic payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.EquipmentCharacteristicRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать характеристику оборудования
+      tags:
+      - equipment_characteristics
+  /api/workspaces/{workspaceId}/operator-competencies:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.OperatorCompetency'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список компетенций операторов
+      tags:
+      - operator_competencies
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      - description: Competency payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.OperatorCompetencyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать компетенцию оператора
+      tags:
+      - operator_competencies
+  /api/workspaces/{workspaceId}/operator-devices:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.OperatorDevice'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список связок оператор-оборудование
+      tags:
+      - operator_devices
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      - description: Operator device payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.OperatorDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать связку оператор-оборудование
+      tags:
+      - operator_devices
+  /api/workspaces/{workspaceId}/operators:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.Operator'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список операторов
+      tags:
+      - operators
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      - description: Operator payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.OperatorRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать оператора
+      tags:
+      - operators
+  /api/workspaces/{workspaceId}/user-tasks:
+    get:
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/storage.UserTask'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Список пользовательских задач
+      tags:
+      - user_tasks
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Workspace ID
+        in: path
+        name: workspaceId
+        required: true
+        type: integer
+      - description: User task payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.UserTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создать пользовательскую задачу
+      tags:
+      - user_tasks
+  /health:
+    get:
+      description: Проверяет доступность API и соединение с БД
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Проверка работоспособности
+      tags:
+      - system
+swagger: "2.0"

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Halomeny — планирование 3D-печати</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__row">
+      <div class="brand">
+        <div class="brand__icon"><img src="assets/logo.svg" alt=""></div>
+        <div>
+          <h1>Halomeny</h1>
+          <p>Система рекомендаций загрузки производственного оборудования</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <span id="api-status" class="pill">API: неизвестно</span>
+      </div>
+    </div>
+    <div class="app-header__row app-header__row--nav">
+      <nav class="nav">
+        <button class="nav__link is-active" data-page="home">Главная</button>
+        <button class="nav__link" data-page="tasks">Задания</button>
+        <button class="nav__link" data-page="equipment">Оборудование</button>
+        <button class="nav__link" data-page="operators">Операторы</button>
+        <button class="nav__link" data-page="schedules">Графики работы</button>
+        <button class="nav__link" data-page="halomeny">Halomeny</button>
+      </nav>
+      <div class="workspace-bar">
+        <label for="workspace-select">Рабочее пространство</label>
+        <div class="workspace-bar__controls">
+          <select id="workspace-select"></select>
+          <button class="button button--ghost" id="refresh-workspaces">Обновить</button>
+          <button class="button" id="open-workspace-modal">Создать</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="page is-active" data-page="home">
+      <div class="layout-grid">
+        <div class="card">
+          <div class="card__header">
+            <h2>Статистика на сегодня</h2>
+            <button class="button button--ghost" id="recompute-plan">Пересчитать план</button>
+          </div>
+          <div class="stats" id="home-stats"></div>
+        </div>
+        <div class="card">
+          <div class="card__header">
+            <h2>Ближайшие задачи</h2>
+          </div>
+          <div class="table" id="upcoming-tasks"></div>
+        </div>
+      </div>
+
+      <section class="card">
+        <div class="card__header">
+          <h2>Задания в течение дня</h2>
+          <div class="toolbar">
+            <span class="muted" id="home-date"></span>
+          </div>
+        </div>
+        <div class="gantt" id="home-gantt"></div>
+      </section>
+
+      <section class="card">
+        <div class="card__header">
+          <h2>Загруженность оборудования</h2>
+          <button class="button button--ghost" id="refresh-devices">Обновить</button>
+        </div>
+        <div class="device-grid" id="equipment-cards"></div>
+      </section>
+    </section>
+
+    <section class="page" data-page="tasks">
+      <div class="card">
+        <div class="card__header">
+          <h2>Задания</h2>
+          <div class="toolbar">
+            <label class="toolbar__item" for="tasks-date">
+              На дату:
+              <input id="tasks-date" type="date" />
+            </label>
+            <button class="button" id="open-task-modal">Добавить</button>
+          </div>
+        </div>
+        <div class="gantt" id="tasks-gantt"></div>
+        <div class="legend">
+          <div><span class="legend__swatch done"></span>Задание выполнено</div>
+          <div><span class="legend__swatch progress"></span>Выполняется</div>
+          <div><span class="legend__swatch pending"></span>Ожидает запуск</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" data-page="equipment">
+      <div class="card">
+        <div class="card__header">
+          <h2>Оборудование</h2>
+          <button class="button" id="open-device-modal">Добавить</button>
+        </div>
+        <div class="device-grid" id="equipment-list"></div>
+      </div>
+    </section>
+
+    <section class="page" data-page="operators">
+      <div class="card">
+        <div class="card__header">
+          <h2>Операторы</h2>
+          <button class="button" id="open-operator-modal">Добавить</button>
+        </div>
+        <div class="operators" id="operators-list"></div>
+      </div>
+    </section>
+
+    <section class="page" data-page="schedules">
+      <div class="card">
+        <div class="card__header">
+          <h2>Графики работы</h2>
+        </div>
+        <div class="gantt" id="operators-gantt"></div>
+      </div>
+    </section>
+
+    <section class="page" data-page="halomeny">
+      <div class="card">
+        <h2>О системе</h2>
+        <p>
+          Halomeny помогает распределять задания аддитивного производства по оборудованию и операторам,
+          минимизируя простои и учитывая приоритеты, сроки и наличие персонала.
+        </p>
+        <p class="muted">
+          Интерфейс синхронизирован с базой данных через API и отражает текущее состояние работы.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="modal" id="workspace-modal">
+    <form method="dialog" class="modal__content" id="workspace-form">
+      <div class="modal__header">
+        <h3>Создать рабочее пространство</h3>
+        <button class="icon-button" type="button" data-close>✕</button>
+      </div>
+      <label>
+        Название
+        <input name="name" type="text" required />
+      </label>
+      <label>
+        Логин пользователя
+        <input name="user_login" type="text" required />
+      </label>
+      <div class="modal__actions">
+        <button class="button" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="task-modal">
+    <form method="dialog" class="modal__content" id="task-form">
+      <div class="modal__header">
+        <h3>Новое задание</h3>
+        <button class="icon-button" type="button" data-close>✕</button>
+      </div>
+      <div class="modal__grid">
+        <label>
+          Название задания
+          <input name="name" type="text" required />
+        </label>
+        <label>
+          Номер документа
+          <input name="doc_num" type="text" required />
+        </label>
+        <label>
+          Фото модели (URL)
+          <input name="photo_url" type="text" placeholder="https://" required />
+        </label>
+        <label>
+          Срок реализации
+          <input name="deadline" type="datetime-local" />
+        </label>
+        <label>
+          Оператор
+          <select name="operator_id" id="task-operator" required></select>
+        </label>
+        <label>
+          Тип задания
+          <select name="device_task_type_id" id="task-type" required></select>
+        </label>
+        <label>
+          Приоритет
+          <select name="priority_id" id="task-priority" required></select>
+        </label>
+        <label>
+          Оборудование
+          <select name="device_id" id="task-device" required></select>
+        </label>
+        <label>
+          Время выполнения, мин
+          <input name="duration_min" type="number" min="0" required />
+        </label>
+        <label>
+          Время на настройку, мин
+          <input name="setup_time_min" type="number" min="0" required />
+        </label>
+        <label>
+          Время на снятие изделия, мин
+          <input name="unload_time_min" type="number" min="0" required />
+        </label>
+        <label>
+          Плановое время начала
+          <input name="plan_start" type="datetime-local" />
+        </label>
+        <label>
+          Плановое время завершения
+          <input name="plan_end" type="datetime-local" />
+        </label>
+      </div>
+      <label class="checkbox">
+        <input type="checkbox" name="need_operator" />
+        Требуется участие оператора
+      </label>
+      <label class="checkbox">
+        <input type="checkbox" name="add_in_rec_system" checked />
+        Учитывать в рекомендациях
+      </label>
+      <div class="modal__actions">
+        <button class="button" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="operator-modal">
+    <form method="dialog" class="modal__content" id="operator-form">
+      <div class="modal__header">
+        <h3>Новый оператор</h3>
+        <button class="icon-button" type="button" data-close>✕</button>
+      </div>
+      <div class="modal__grid">
+        <label>
+          ФИО
+          <input name="full_name" type="text" required />
+        </label>
+        <label>
+          Номер телефона
+          <input name="phone_number" type="text" placeholder="+7 (___) ___-__-__" required />
+        </label>
+        <label>
+          Логин пользователя
+          <input name="user_login" type="text" required />
+        </label>
+      </div>
+      <div class="modal__actions">
+        <button class="button" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="device-modal">
+    <form method="dialog" class="modal__content" id="device-form">
+      <div class="modal__header">
+        <h3>Новое оборудование</h3>
+        <button class="icon-button" type="button" data-close>✕</button>
+      </div>
+      <div class="modal__grid">
+        <label>
+          Название устройства
+          <input name="name" type="text" required />
+        </label>
+        <label>
+          Фото устройства (URL)
+          <input name="photo_url" type="text" placeholder="https://" required />
+        </label>
+        <label>
+          Тип устройства
+          <select name="device_type_id" id="device-type" required></select>
+        </label>
+        <label>
+          Состояние
+          <select name="device_state_id" id="device-state" required></select>
+        </label>
+      </div>
+      <label class="checkbox">
+        <input type="checkbox" name="add_in_rec_system" checked />
+        Учитывать в рекомендациях
+      </label>
+      <div class="modal__actions">
+        <button class="button" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>
