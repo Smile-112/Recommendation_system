@@ -45,8 +45,7 @@
         <button class="nav__link" data-page="operators">Операторы</button>
         <button class="nav__link" data-page="schedules">Графики работы</button>
         <button class="nav__link" data-page="references">Справочники</button>
-        <button class="nav__link" data-page="halomeny">Halomeny</button>
-        <button class="nav__link" data-page="profile">Профиль</button>
+        <button class="nav__link" data-page="about">О нас</button>
       </nav>
       <div class="workspace-bar">
         <label for="workspace-select">Рабочее пространство</label>
@@ -94,6 +93,17 @@
           </div>
         </div>
         <div class="gantt" id="home-gantt"></div>
+        <div class="legend legend--interactive" id="home-gantt-legend">
+          <div class="legend__item" data-status="done">
+            <span class="legend__swatch done"></span>Задание выполнено
+          </div>
+          <div class="legend__item" data-status="progress">
+            <span class="legend__swatch progress"></span>Выполняется
+          </div>
+          <div class="legend__item" data-status="pending">
+            <span class="legend__swatch pending"></span>Ожидает запуск
+          </div>
+        </div>
       </section>
 
       <section class="card">
@@ -118,10 +128,16 @@
           </div>
         </div>
         <div class="gantt" id="tasks-gantt"></div>
-        <div class="legend">
-          <div><span class="legend__swatch done"></span>Задание выполнено</div>
-          <div><span class="legend__swatch progress"></span>Выполняется</div>
-          <div><span class="legend__swatch pending"></span>Ожидает запуск</div>
+        <div class="legend legend--interactive" id="tasks-gantt-legend">
+          <div class="legend__item" data-status="done">
+            <span class="legend__swatch done"></span>Задание выполнено
+          </div>
+          <div class="legend__item" data-status="progress">
+            <span class="legend__swatch progress"></span>Выполняется
+          </div>
+          <div class="legend__item" data-status="pending">
+            <span class="legend__swatch pending"></span>Ожидает запуск
+          </div>
         </div>
       </div>
     </section>
@@ -150,8 +166,26 @@
       <div class="card">
         <div class="card__header">
           <h2>Графики работы</h2>
+          <button class="button" id="open-schedule-modal">Добавить перерыв</button>
         </div>
         <div class="gantt" id="operators-gantt"></div>
+        <div class="legend legend--interactive" id="operators-gantt-legend">
+          <div class="legend__item" data-status="progress">
+            <span class="legend__swatch progress"></span>Печать в работе
+          </div>
+          <div class="legend__item" data-status="pending">
+            <span class="legend__swatch pending"></span>Задание в очереди
+          </div>
+          <div class="legend__item" data-status="done">
+            <span class="legend__swatch done"></span>Завершённая печать
+          </div>
+          <div class="legend__item" data-status="lunch">
+            <span class="legend__swatch lunch"></span>Обед
+          </div>
+          <div class="legend__item" data-status="off">
+            <span class="legend__swatch off"></span>Не работает
+          </div>
+        </div>
       </div>
     </section>
 
@@ -161,7 +195,7 @@
           <div class="card__header">
             <h2>Характеристики оборудования</h2>
           </div>
-          <p class="card__subtitle">Характеристики связываются с типами устройств в рабочем пространстве.</p>
+          <p class="card__subtitle">Характеристики связываются с оборудованием в рабочем пространстве.</p>
           <form class="inline-form" id="equipment-characteristic-form">
             <label>
               Название
@@ -173,9 +207,9 @@
         </div>
         <div class="card">
           <div class="card__header">
-            <h2>Типы оборудования</h2>
+            <h2>Оборудование</h2>
           </div>
-          <p class="card__subtitle">Каждый тип связан с характеристикой и определяет набор устройств.</p>
+          <p class="card__subtitle">Описание типов оборудования и связанной с ними характеристики.</p>
           <form class="inline-form" id="device-type-form">
             <label>
               Название
@@ -208,8 +242,8 @@
             <h2>Карта связей данных</h2>
           </div>
           <ul class="data-map">
-            <li><strong>Workspace</strong> → характеристики → типы оборудования → устройства → задания.</li>
-            <li><strong>Операторы</strong> → компетенции по типам оборудования → задачи и смены.</li>
+            <li><strong>Workspace</strong> → характеристики → оборудование → устройства → задания.</li>
+            <li><strong>Операторы</strong> → компетенции по оборудованию → задачи и смены.</li>
             <li><strong>Приоритеты</strong> и <strong>типы заданий</strong> задают правила планирования.</li>
             <li><strong>User tasks</strong> фиксируют персональные поручения в рамках выбранного задания.</li>
           </ul>
@@ -218,15 +252,20 @@
       </div>
     </section>
 
-    <section class="page" data-page="halomeny">
+    <section class="page" data-page="about">
       <div class="card">
-        <h2>О системе</h2>
+        <h2>О нас</h2>
         <p>
-          Halomeny помогает распределять задания аддитивного производства по оборудованию и операторам,
-          минимизируя простои и учитывая приоритеты, сроки и наличие персонала.
+          Halomeny — это единая панель управления 3D-печатью, где задачи, операторы и оборудование
+          собраны в одном понятном интерфейсе.
+        </p>
+        <p>
+          Мы делаем планирование прозрачным: вы видите загрузку по графику, ближайшие работы и
+          приоритетные задания без лишних кликов.
         </p>
         <p class="muted">
-          Интерфейс синхронизирован с базой данных через API и отражает текущее состояние работы.
+          Продукт создан для команд, которым важны скорость согласований, аккуратный контроль сроков и
+          уверенность в том, что ресурсы используются по максимуму.
         </p>
       </div>
     </section>
@@ -311,9 +350,9 @@
   </dialog>
 
   <dialog class="modal" id="task-modal">
-    <form method="dialog" class="modal__content" id="task-form">
+    <form method="dialog" class="modal__content" id="task-form" data-mode="create">
       <div class="modal__header">
-        <h3>Новое задание</h3>
+        <h3 id="task-modal-title">Новое задание</h3>
         <button class="icon-button" type="button" data-close>✕</button>
       </div>
       <div class="modal__grid">
@@ -373,14 +412,16 @@
           <input name="plan_end" type="datetime-local" />
         </label>
       </div>
-      <label class="checkbox">
-        <input type="checkbox" name="need_operator" />
-        Требуется участие оператора
-      </label>
-      <label class="checkbox">
-        <input type="checkbox" name="add_in_rec_system" checked />
-        Учитывать в рекомендациях
-      </label>
+      <div class="checkbox-group">
+        <label class="checkbox">
+          <input type="checkbox" name="need_operator" />
+          Требуется участие оператора
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" name="add_in_rec_system" checked />
+          Учитывать в рекомендациях
+        </label>
+      </div>
       <div class="modal__actions">
         <button class="button" type="submit">Сохранить</button>
       </div>
@@ -388,9 +429,9 @@
   </dialog>
 
   <dialog class="modal" id="operator-modal">
-    <form method="dialog" class="modal__content" id="operator-form">
+    <form method="dialog" class="modal__content" id="operator-form" data-mode="create">
       <div class="modal__header">
-        <h3>Новый оператор</h3>
+        <h3 id="operator-modal-title">Новый оператор</h3>
         <button class="icon-button" type="button" data-close>✕</button>
       </div>
       <div class="modal__grid">
@@ -414,9 +455,9 @@
   </dialog>
 
   <dialog class="modal" id="device-modal">
-    <form method="dialog" class="modal__content" id="device-form">
+    <form method="dialog" class="modal__content" id="device-form" data-mode="create">
       <div class="modal__header">
-        <h3>Новое оборудование</h3>
+        <h3 id="device-modal-title">Новое оборудование</h3>
         <button class="icon-button" type="button" data-close>✕</button>
       </div>
       <div class="modal__grid">
@@ -442,6 +483,39 @@
         <input type="checkbox" name="add_in_rec_system" checked />
         Учитывать в рекомендациях
       </label>
+      <div class="modal__actions">
+        <button class="button" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="schedule-modal">
+    <form method="dialog" class="modal__content" id="schedule-form" data-mode="create">
+      <div class="modal__header">
+        <h3 id="schedule-modal-title">Новый перерыв</h3>
+        <button class="icon-button" type="button" data-close>✕</button>
+      </div>
+      <div class="modal__grid">
+        <label>
+          Оператор
+          <select name="operator_id" id="schedule-operator" required></select>
+        </label>
+        <label>
+          Тип
+          <select name="schedule_type" id="schedule-type" required>
+            <option value="lunch">Обед</option>
+            <option value="off">Не работает</option>
+          </select>
+        </label>
+        <label>
+          Начало
+          <input name="start_time" type="datetime-local" required />
+        </label>
+        <label>
+          Завершение
+          <input name="end_time" type="datetime-local" required />
+        </label>
+      </div>
       <div class="modal__actions">
         <button class="button" type="submit">Сохранить</button>
       </div>

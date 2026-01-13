@@ -92,7 +92,7 @@ type UserTaskRequest struct {
 	EndTime        *time.Time `json:"end_time"`
 	Priority       *int       `json:"priority"`
 	CompletionMark *bool      `json:"completion_mark"`
-	DeviceTaskID   int64      `json:"device_task_id"`
+	DeviceTaskID   *int64     `json:"device_task_id"`
 	OperatorID     int64      `json:"operator_id"`
 }
 

@@ -13,12 +13,16 @@ const openWorkspaceModalBtn = document.getElementById('open-workspace-modal');
 const openTaskModalBtn = document.getElementById('open-task-modal');
 const openOperatorModalBtn = document.getElementById('open-operator-modal');
 const openDeviceModalBtn = document.getElementById('open-device-modal');
+const openScheduleModalBtn = document.getElementById('open-schedule-modal');
 const tasksDateInput = document.getElementById('tasks-date');
 const homeStats = document.getElementById('home-stats');
 const upcomingTasks = document.getElementById('upcoming-tasks');
 const entitySummary = document.getElementById('entity-summary');
 const homeGantt = document.getElementById('home-gantt');
 const tasksGantt = document.getElementById('tasks-gantt');
+const homeGanttLegend = document.getElementById('home-gantt-legend');
+const tasksGanttLegend = document.getElementById('tasks-gantt-legend');
+const operatorsGanttLegend = document.getElementById('operators-gantt-legend');
 const equipmentCards = document.getElementById('equipment-cards');
 const equipmentList = document.getElementById('equipment-list');
 const operatorsList = document.getElementById('operators-list');
@@ -42,11 +46,17 @@ const workspaceModal = document.getElementById('workspace-modal');
 const taskModal = document.getElementById('task-modal');
 const operatorModal = document.getElementById('operator-modal');
 const deviceModal = document.getElementById('device-modal');
+const scheduleModal = document.getElementById('schedule-modal');
+const taskModalTitle = document.getElementById('task-modal-title');
+const operatorModalTitle = document.getElementById('operator-modal-title');
+const deviceModalTitle = document.getElementById('device-modal-title');
+const scheduleModalTitle = document.getElementById('schedule-modal-title');
 
 const workspaceForm = document.getElementById('workspace-form');
 const taskForm = document.getElementById('task-form');
 const operatorForm = document.getElementById('operator-form');
 const deviceForm = document.getElementById('device-form');
+const scheduleForm = document.getElementById('schedule-form');
 
 const taskOperatorSelect = document.getElementById('task-operator');
 const taskTypeSelect = document.getElementById('task-type');
@@ -54,6 +64,8 @@ const taskPrioritySelect = document.getElementById('task-priority');
 const taskDeviceSelect = document.getElementById('task-device');
 const deviceTypeSelect = document.getElementById('device-type');
 const deviceStateSelect = document.getElementById('device-state');
+const scheduleOperatorSelect = document.getElementById('schedule-operator');
+const scheduleTypeSelect = document.getElementById('schedule-type');
 
 const navLinks = document.querySelectorAll('.nav__link');
 const pages = document.querySelectorAll('.page');
@@ -77,6 +89,7 @@ const state = {
 const ganttHours = Array.from({ length: 14 }, (_, i) => 9 + i);
 const storedToken = localStorage.getItem('authToken');
 let authToken = storedToken || '';
+let autoRefreshTimer = null;
 
 async function fetchJSON(url, options) {
   const headers = new Headers(options?.headers || {});
@@ -109,6 +122,14 @@ function formatDate(value) {
 function toLocalInputValue(date) {
   const pad = (num) => String(num).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function toLocalDateTimeValue(date) {
+  if (!date) return '';
+  const pad = (num) => String(num).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+    date.getHours()
+  )}:${pad(date.getMinutes())}`;
 }
 
 function parseDateInput(value) {
@@ -245,6 +266,23 @@ function setActivePage(page) {
   });
 }
 
+function scheduleAutoRefresh() {
+  if (autoRefreshTimer) clearTimeout(autoRefreshTimer);
+  autoRefreshTimer = setTimeout(async () => {
+    autoRefreshTimer = null;
+    await refreshWorkspaceView();
+  }, 200);
+}
+
+async function refreshWorkspaceView() {
+  if (!getWorkspaceId()) {
+    renderAll();
+    return;
+  }
+  await loadWorkspaceData();
+  await loadUsers();
+}
+
 async function loadWorkspaces() {
   const query = state.currentUser ? `?user_login=${encodeURIComponent(state.currentUser.login)}` : '';
   state.workspaces = await fetchJSON(`${apiBase}/workspaces/${query}`);
@@ -366,8 +404,14 @@ function buildGantt(container, tasks, labelFormatter) {
     const track = document.createElement('div');
     track.className = 'gantt__track';
 
-    const startValue = task.plan_start ? new Date(task.plan_start) : null;
-    const endValue = task.plan_end
+    const startValue = task._start
+      ? new Date(task._start)
+      : task.plan_start
+      ? new Date(task.plan_start)
+      : null;
+    const endValue = task._end
+      ? new Date(task._end)
+      : task.plan_end
       ? new Date(task.plan_end)
       : startValue && task.duration_min
       ? new Date(startValue.getTime() + task.duration_min * 60000)
@@ -385,10 +429,18 @@ function buildGantt(container, tasks, labelFormatter) {
       const width = Math.max(4, ((endMinutes - startMinutes) / totalMinutes) * 100);
       const left = (startMinutes / totalMinutes) * 100;
       const bar = document.createElement('div');
-      bar.className = `gantt__bar ${getTaskStatus(task)}`;
+      const status = task._status || getTaskStatus(task);
+      bar.className = `gantt__bar ${status}`;
       bar.style.left = `${left}%`;
       bar.style.width = `${width}%`;
       bar.textContent = `${formatTime(startValue)} – ${formatTime(endValue)}`;
+      bar.dataset.status = status;
+      if (task.id) {
+        bar.dataset.taskId = task.id;
+      }
+      if (task._userTaskId) {
+        bar.dataset.userTaskId = task._userTaskId;
+      }
       track.appendChild(bar);
     }
 
@@ -434,7 +486,7 @@ function renderHomeStats() {
   ]
     .map(
       (stat) => `
-      <div class="stat-card">
+      <div class="stat-card clickable" data-stat="${stat.label}">
         <h4>${stat.label}</h4>
         <span>${stat.value}</span>
       </div>
@@ -464,7 +516,7 @@ function renderEntitySummary() {
   entitySummary.innerHTML = items
     .map(
       (item) => `
-        <div class="entity-card">
+        <div class="entity-card clickable" data-entity="${item.label}">
           <strong>${item.value}</strong>
           <span>${item.label}</span>
         </div>
@@ -506,7 +558,7 @@ function renderUpcomingTasks() {
         ? `<span class="badge badge--info">${priority.name}</span>`
         : '<span class="badge">Без приоритета</span>';
       return `
-        <div class="table__row">
+        <div class="table__row clickable" data-task-id="${task.id}">
           <div>
             <strong>${task.name}</strong><br />
             <span class="muted">${operator ? operator.full_name : 'Оператор не назначен'} ·
@@ -571,7 +623,7 @@ function renderEquipment() {
       ? '<span class="badge badge--info">В рекомендациях</span>'
       : '<span class="badge">Без рекомендаций</span>';
     return `
-      <div class="device-card">
+      <div class="device-card clickable" data-device-id="${device.id}">
         <img src="${device.photo_url || 'https://placehold.co/400x240?text=3D+Printer'}" alt="${device.name}" />
         <div>
           <strong>${device.name}</strong>
@@ -634,7 +686,7 @@ function renderOperators() {
         : '<span class="chip">Не указано</span>';
 
       return `
-        <div class="operator-card">
+        <div class="operator-card clickable" data-operator-id="${operator.id}">
           <div class="operator-card__header">
             <strong>${operator.full_name}</strong>
             <span class="muted">${operator.phone_number}</span>
@@ -660,18 +712,28 @@ function renderOperators() {
 function renderOperatorsGantt() {
   const tasksByOperator = state.operators.map((operator) => {
     const tasks = state.tasks.filter((task) => task.operator_id === operator.id);
+    const userTasks = state.userTasks.filter((task) => task.operator_id === operator.id);
     return {
       operator,
-      tasks
+      tasks,
+      userTasks
     };
   });
 
-  const flattenedTasks = tasksByOperator.flatMap((row) =>
-    row.tasks.map((task) => ({
+  const flattenedTasks = tasksByOperator.flatMap((row) => [
+    ...row.tasks.map((task) => ({
       ...task,
       _label: row.operator.full_name
+    })),
+    ...row.userTasks.map((task) => ({
+      ...task,
+      _label: row.operator.full_name,
+      _start: task.start_time,
+      _end: task.end_time,
+      _status: getUserTaskStatus(task),
+      _userTaskId: task.id
     }))
-  );
+  ]);
 
   buildGantt(operatorsGantt, flattenedTasks, (task) => {
     return `
@@ -702,6 +764,7 @@ function renderSelects() {
   populateSelect(taskDeviceSelect, state.devices, (d) => `${d.name} (#${d.id})`);
   populateSelect(deviceTypeSelect, state.deviceTypes, (t) => `${t.name} (#${t.id})`);
   populateSelect(deviceStateSelect, state.deviceStates, (s) => `${s.name} (#${s.id})`);
+  populateSelect(scheduleOperatorSelect, state.operators, (o) => `${o.full_name} (#${o.id})`);
   populateSelect(
     equipmentCharacteristicSelect,
     state.equipmentCharacteristics,
@@ -763,7 +826,7 @@ function renderReferenceTables() {
   }
 
   if (!state.deviceTypes.length) {
-    deviceTypesList.innerHTML = '<div class="gantt__empty">Типы оборудования не добавлены</div>';
+    deviceTypesList.innerHTML = '<div class="gantt__empty">Оборудование не добавлено</div>';
   } else {
     const header = `
       <div class="table__row">
@@ -826,6 +889,140 @@ function renderAll() {
   renderOperatorsGantt();
   renderTasksPage();
   renderReferenceTables();
+}
+
+function getUserTaskStatus(task) {
+  const name = (task.name || '').toLowerCase();
+  if (name.includes('обед')) return 'lunch';
+  return 'off';
+}
+
+function resetTaskForm() {
+  taskForm.reset();
+  taskForm.dataset.mode = 'create';
+  delete taskForm.dataset.taskId;
+  if (taskModalTitle) taskModalTitle.textContent = 'Новое задание';
+}
+
+function resetOperatorForm() {
+  operatorForm.reset();
+  operatorForm.dataset.mode = 'create';
+  delete operatorForm.dataset.operatorId;
+  if (operatorModalTitle) operatorModalTitle.textContent = 'Новый оператор';
+}
+
+function resetDeviceForm() {
+  deviceForm.reset();
+  deviceForm.dataset.mode = 'create';
+  delete deviceForm.dataset.deviceId;
+  if (deviceModalTitle) deviceModalTitle.textContent = 'Новое оборудование';
+}
+
+function resetScheduleForm() {
+  scheduleForm.reset();
+  scheduleForm.dataset.mode = 'create';
+  delete scheduleForm.dataset.userTaskId;
+  if (scheduleModalTitle) scheduleModalTitle.textContent = 'Новый перерыв';
+}
+
+function fillTaskForm(task) {
+  taskForm.dataset.mode = 'edit';
+  taskForm.dataset.taskId = task.id;
+  if (taskModalTitle) taskModalTitle.textContent = 'Редактировать задание';
+  taskForm.elements.name.value = task.name || '';
+  taskForm.elements.doc_num.value = task.doc_num || '';
+  taskForm.elements.photo_url.value = task.photo_url || '';
+  taskForm.elements.deadline.value = task.deadline ? toLocalDateTimeValue(new Date(task.deadline)) : '';
+  taskForm.elements.operator_id.value = task.operator_id || '';
+  taskForm.elements.device_task_type_id.value = task.device_task_type_id || '';
+  taskForm.elements.priority_id.value = task.priority_id || '';
+  taskForm.elements.device_id.value = task.device_id || '';
+  taskForm.elements.duration_min.value = task.duration_min ?? '';
+  taskForm.elements.setup_time_min.value = task.setup_time_min ?? '';
+  taskForm.elements.unload_time_min.value = task.unload_time_min ?? '';
+  taskForm.elements.plan_start.value = task.plan_start
+    ? toLocalDateTimeValue(new Date(task.plan_start))
+    : '';
+  taskForm.elements.plan_end.value = task.plan_end ? toLocalDateTimeValue(new Date(task.plan_end)) : '';
+  taskForm.elements.need_operator.checked = Boolean(task.need_operator);
+  taskForm.elements.add_in_rec_system.checked = task.add_in_rec_system !== false;
+}
+
+function fillOperatorForm(operator) {
+  operatorForm.dataset.mode = 'edit';
+  operatorForm.dataset.operatorId = operator.id;
+  if (operatorModalTitle) operatorModalTitle.textContent = 'Редактировать оператора';
+  operatorForm.elements.full_name.value = operator.full_name || '';
+  operatorForm.elements.phone_number.value = operator.phone_number || '';
+  operatorForm.elements.user_login.value = operator.user_login || '';
+}
+
+function fillDeviceForm(device) {
+  deviceForm.dataset.mode = 'edit';
+  deviceForm.dataset.deviceId = device.id;
+  if (deviceModalTitle) deviceModalTitle.textContent = 'Редактировать оборудование';
+  deviceForm.elements.name.value = device.name || '';
+  deviceForm.elements.photo_url.value = device.photo_url || '';
+  deviceForm.elements.device_type_id.value = device.device_type_id || '';
+  deviceForm.elements.device_state_id.value = device.device_state_id || '';
+  deviceForm.elements.add_in_rec_system.checked = device.add_in_rec_system !== false;
+}
+
+function fillScheduleForm(userTask) {
+  scheduleForm.dataset.mode = 'edit';
+  scheduleForm.dataset.userTaskId = userTask.id;
+  if (scheduleModalTitle) scheduleModalTitle.textContent = 'Редактировать перерыв';
+  scheduleForm.elements.operator_id.value = userTask.operator_id || '';
+  scheduleForm.elements.start_time.value = userTask.start_time
+    ? toLocalDateTimeValue(new Date(userTask.start_time))
+    : '';
+  scheduleForm.elements.end_time.value = userTask.end_time
+    ? toLocalDateTimeValue(new Date(userTask.end_time))
+    : '';
+  scheduleForm.elements.schedule_type.value = getUserTaskStatus(userTask);
+}
+
+function openTaskEditor(taskId) {
+  const task = state.tasks.find((item) => item.id === Number(taskId));
+  if (!task) return;
+  fillTaskForm(task);
+  openModal(taskModal);
+}
+
+function openDeviceEditor(deviceId) {
+  const device = state.devices.find((item) => item.id === Number(deviceId));
+  if (!device) return;
+  fillDeviceForm(device);
+  openModal(deviceModal);
+}
+
+function openOperatorEditor(operatorId) {
+  const operator = state.operators.find((item) => item.id === Number(operatorId));
+  if (!operator) return;
+  fillOperatorForm(operator);
+  openModal(operatorModal);
+}
+
+function openScheduleEditor(userTaskId) {
+  const userTask = state.userTasks.find((item) => item.id === Number(userTaskId));
+  if (!userTask) return;
+  fillScheduleForm(userTask);
+  openModal(scheduleModal);
+}
+
+function handleLegendHover(event, legend) {
+  if (!legend) return;
+  const bar = event.target.closest('.gantt__bar');
+  if (!bar) return;
+  const status = bar.dataset.status;
+  legend.querySelectorAll('.legend__item').forEach((item) => {
+    item.classList.toggle('is-active', item.dataset.status === status);
+  });
+}
+
+function clearLegendHover(legend) {
+  if (!legend) return;
+  legend.querySelectorAll('.legend__item').forEach((item) => item.classList.remove('is-active'));
 }
 
 function saveAuth(token, user) {
@@ -1020,13 +1217,18 @@ async function createTask(event) {
     alert('Плановое завершение не может быть раньше начала.');
     return;
   }
-  await fetchJSON(`${apiBase}/workspaces/${workspaceId}/device-tasks`, {
-    method: 'POST',
+  const isEdit = taskForm.dataset.mode === 'edit' && taskForm.dataset.taskId;
+  const url = isEdit
+    ? `${apiBase}/device-tasks/${taskForm.dataset.taskId}?workspace_id=${workspaceId}`
+    : `${apiBase}/workspaces/${workspaceId}/device-tasks`;
+  const method = isEdit ? 'PUT' : 'POST';
+  await fetchJSON(url, {
+    method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
   closeModal(taskModal);
-  taskForm.reset();
+  resetTaskForm();
   await loadWorkspaceData();
 }
 
@@ -1037,13 +1239,18 @@ async function createOperator(event) {
   if (!operatorForm.reportValidity()) return;
   const formData = new FormData(operatorForm);
   const payload = Object.fromEntries(formData.entries());
-  await fetchJSON(`${apiBase}/workspaces/${workspaceId}/operators`, {
-    method: 'POST',
+  const isEdit = operatorForm.dataset.mode === 'edit' && operatorForm.dataset.operatorId;
+  const url = isEdit
+    ? `${apiBase}/operators/${operatorForm.dataset.operatorId}?workspace_id=${workspaceId}`
+    : `${apiBase}/workspaces/${workspaceId}/operators`;
+  const method = isEdit ? 'PUT' : 'POST';
+  await fetchJSON(url, {
+    method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
   closeModal(operatorModal);
-  operatorForm.reset();
+  resetOperatorForm();
   await loadWorkspaceData();
 }
 
@@ -1057,13 +1264,50 @@ async function createDevice(event) {
   payload.device_type_id = Number(payload.device_type_id || 0);
   payload.device_state_id = Number(payload.device_state_id || 0);
   payload.add_in_rec_system = formData.get('add_in_rec_system') === 'on';
-  await fetchJSON(`${apiBase}/workspaces/${workspaceId}/devices`, {
-    method: 'POST',
+  const isEdit = deviceForm.dataset.mode === 'edit' && deviceForm.dataset.deviceId;
+  const url = isEdit
+    ? `${apiBase}/devices/${deviceForm.dataset.deviceId}?workspace_id=${workspaceId}`
+    : `${apiBase}/workspaces/${workspaceId}/devices`;
+  const method = isEdit ? 'PUT' : 'POST';
+  await fetchJSON(url, {
+    method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
   closeModal(deviceModal);
-  deviceForm.reset();
+  resetDeviceForm();
+  await loadWorkspaceData();
+}
+
+async function createScheduleEntry(event) {
+  event.preventDefault();
+  const workspaceId = getWorkspaceId();
+  if (!workspaceId) return;
+  if (!scheduleForm.reportValidity()) return;
+  const formData = new FormData(scheduleForm);
+  const payload = Object.fromEntries(formData.entries());
+  payload.operator_id = Number(payload.operator_id || 0);
+  payload.device_task_id = null;
+  payload.start_time = parseDateTimeInput(payload.start_time);
+  payload.end_time = parseDateTimeInput(payload.end_time);
+  payload.name = payload.schedule_type === 'lunch' ? 'Обед' : 'Не работает';
+  delete payload.schedule_type;
+  if (payload.start_time && payload.end_time && payload.end_time < payload.start_time) {
+    alert('Завершение не может быть раньше начала.');
+    return;
+  }
+  const isEdit = scheduleForm.dataset.mode === 'edit' && scheduleForm.dataset.userTaskId;
+  const url = isEdit
+    ? `${apiBase}/user-tasks/${scheduleForm.dataset.userTaskId}?workspace_id=${workspaceId}`
+    : `${apiBase}/workspaces/${workspaceId}/user-tasks`;
+  const method = isEdit ? 'PUT' : 'POST';
+  await fetchJSON(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  closeModal(scheduleModal);
+  resetScheduleForm();
   await loadWorkspaceData();
 }
 
@@ -1220,7 +1464,10 @@ async function clearDatabase() {
 }
 
 navLinks.forEach((link) => {
-  link.addEventListener('click', () => setActivePage(link.dataset.page));
+  link.addEventListener('click', () => {
+    setActivePage(link.dataset.page);
+    scheduleAutoRefresh();
+  });
 });
 
 refreshWorkspacesBtn.addEventListener('click', async () => {
@@ -1235,9 +1482,22 @@ seedDbBtn?.addEventListener('click', seedDatabase);
 clearDbBtn?.addEventListener('click', clearDatabase);
 
 openWorkspaceModalBtn.addEventListener('click', () => openModal(workspaceModal));
-openTaskModalBtn?.addEventListener('click', () => openModal(taskModal));
-openOperatorModalBtn?.addEventListener('click', () => openModal(operatorModal));
-openDeviceModalBtn?.addEventListener('click', () => openModal(deviceModal));
+openTaskModalBtn?.addEventListener('click', () => {
+  resetTaskForm();
+  openModal(taskModal);
+});
+openOperatorModalBtn?.addEventListener('click', () => {
+  resetOperatorForm();
+  openModal(operatorModal);
+});
+openDeviceModalBtn?.addEventListener('click', () => {
+  resetDeviceForm();
+  openModal(deviceModal);
+});
+openScheduleModalBtn?.addEventListener('click', () => {
+  resetScheduleForm();
+  openModal(scheduleModal);
+});
 
 document.querySelectorAll('[data-close]').forEach((button) => {
   button.addEventListener('click', (event) => {
@@ -1250,6 +1510,7 @@ workspaceForm.addEventListener('submit', createWorkspace);
 taskForm.addEventListener('submit', createTask);
 operatorForm.addEventListener('submit', createOperator);
 deviceForm.addEventListener('submit', createDevice);
+scheduleForm?.addEventListener('submit', createScheduleEntry);
 equipmentCharacteristicForm.addEventListener('submit', createEquipmentCharacteristic);
 deviceTypeForm.addEventListener('submit', createDeviceType);
 taskTypeForm.addEventListener('submit', createTaskType);
@@ -1265,6 +1526,85 @@ workspaceSelect.addEventListener('change', () => {
   loadWorkspaceData();
 });
 tasksDateInput.addEventListener('change', renderTasksPage);
+
+homeStats?.addEventListener('click', (event) => {
+  const card = event.target.closest('[data-stat]');
+  if (!card) return;
+  setActivePage('tasks');
+  tasksDateInput.value = toLocalInputValue(new Date());
+  renderTasksPage();
+});
+
+entitySummary?.addEventListener('click', (event) => {
+  const card = event.target.closest('[data-entity]');
+  if (!card) return;
+  const label = card.dataset.entity;
+  const pageMap = {
+    Оборудование: 'equipment',
+    'Типы оборудования': 'references',
+    Характеристики: 'references',
+    Операторы: 'operators',
+    Задания: 'tasks',
+    'Типы заданий': 'references',
+    Компетенции: 'operators',
+    Поручения: 'tasks'
+  };
+  const targetPage = pageMap[label];
+  if (targetPage) {
+    setActivePage(targetPage);
+    scheduleAutoRefresh();
+  }
+});
+
+upcomingTasks?.addEventListener('click', (event) => {
+  const row = event.target.closest('[data-task-id]');
+  if (!row) return;
+  openTaskEditor(row.dataset.taskId);
+});
+
+tasksGantt?.addEventListener('click', (event) => {
+  const bar = event.target.closest('.gantt__bar');
+  if (!bar?.dataset.taskId) return;
+  openTaskEditor(bar.dataset.taskId);
+});
+
+operatorsGantt?.addEventListener('click', (event) => {
+  const bar = event.target.closest('.gantt__bar');
+  if (!bar?.dataset.userTaskId) return;
+  openScheduleEditor(bar.dataset.userTaskId);
+});
+
+equipmentCards?.addEventListener('click', (event) => {
+  const card = event.target.closest('[data-device-id]');
+  if (!card) return;
+  openDeviceEditor(card.dataset.deviceId);
+});
+
+equipmentList?.addEventListener('click', (event) => {
+  const card = event.target.closest('[data-device-id]');
+  if (!card) return;
+  openDeviceEditor(card.dataset.deviceId);
+});
+
+operatorsList?.addEventListener('click', (event) => {
+  const card = event.target.closest('[data-operator-id]');
+  if (!card) return;
+  openOperatorEditor(card.dataset.operatorId);
+});
+
+homeGantt?.addEventListener('mouseover', (event) => handleLegendHover(event, homeGanttLegend));
+homeGantt?.addEventListener('mouseout', () => clearLegendHover(homeGanttLegend));
+tasksGantt?.addEventListener('mouseover', (event) => handleLegendHover(event, tasksGanttLegend));
+tasksGantt?.addEventListener('mouseout', () => clearLegendHover(tasksGanttLegend));
+operatorsGantt?.addEventListener('mouseover', (event) =>
+  handleLegendHover(event, operatorsGanttLegend)
+);
+operatorsGantt?.addEventListener('mouseout', () => clearLegendHover(operatorsGanttLegend));
+
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('button')) return;
+  scheduleAutoRefresh();
+});
 
 tasksDateInput.value = toLocalInputValue(new Date());
 
