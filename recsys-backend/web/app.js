@@ -92,12 +92,14 @@ const dayStartHour = 9;
 const dayEndHour = 22;
 const ganttHours = Array.from({ length: dayEndHour - dayStartHour }, (_, i) => dayStartHour + i);
 const ganttTotalMinutes = (dayEndHour - dayStartHour) * 60;
+const ganttNowUpdateIntervalMs = 30000;
 const storedToken = localStorage.getItem('authToken');
 let authToken = storedToken || '';
 let autoRefreshTimer = null;
 let ganttDragState = null;
 let suppressGanttClick = false;
 let pendingOverlapCheck = false;
+let ganttNowTimer = null;
 
 async function fetchJSON(url, options) {
   const headers = new Headers(options?.headers || {});
@@ -453,6 +455,73 @@ function buildDateFromMinutes(date, minutesFromStart) {
   return base;
 }
 
+function updateGanttNowMarker(container) {
+  if (!container) return;
+  const header = container.querySelector('.gantt__header');
+  const marker = header?.querySelector('.gantt__now-marker');
+  const badge = marker?.querySelector('.gantt__now-badge');
+  const line = container.querySelector('.gantt__now-line');
+  if (!header || !marker || !badge || !line) return;
+
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+  const offsetMinutes = nowMinutes - dayStartHour * 60;
+  const percent = offsetMinutes / ganttTotalMinutes;
+  const labelCell = header.querySelector('div:first-child');
+  const labelWidth = labelCell ? labelCell.offsetWidth : 200;
+  const headerRect = header.getBoundingClientRect();
+  const trackWidth = headerRect.width - labelWidth;
+
+  if (!trackWidth) return;
+
+  if (percent < 0 || percent > 1) {
+    marker.classList.add('is-hidden');
+    line.classList.add('is-hidden');
+    return;
+  }
+
+  marker.classList.remove('is-hidden');
+  line.classList.remove('is-hidden');
+
+  const left = labelWidth + percent * trackWidth;
+  const headerHeight = header.offsetHeight;
+  const containerHeight = container.scrollHeight;
+
+  marker.style.left = `${left}px`;
+  badge.textContent = formatTime(now);
+  line.style.left = `${left}px`;
+  line.style.top = `${headerHeight}px`;
+  line.style.height = `${Math.max(0, containerHeight - headerHeight)}px`;
+}
+
+function updateAllGanttNowMarkers() {
+  document.querySelectorAll('.gantt').forEach((container) => updateGanttNowMarker(container));
+}
+
+function ensureGanttNowMarker(container) {
+  if (!container) return;
+  const header = container.querySelector('.gantt__header');
+  if (!header) return;
+  if (!header.querySelector('.gantt__now-marker')) {
+    const marker = document.createElement('div');
+    marker.className = 'gantt__now-marker';
+    marker.innerHTML = `
+      <span class="gantt__now-badge">--:--</span>
+      <span class="gantt__now-arrow"></span>
+    `;
+    header.appendChild(marker);
+  }
+  if (!container.querySelector('.gantt__now-line')) {
+    const line = document.createElement('div');
+    line.className = 'gantt__now-line';
+    container.appendChild(line);
+  }
+  updateGanttNowMarker(container);
+  if (!ganttNowTimer) {
+    ganttNowTimer = window.setInterval(updateAllGanttNowMarkers, ganttNowUpdateIntervalMs);
+  }
+}
+
 function buildGantt(container, tasks, labelFormatter) {
   if (!tasks.length) {
     container.innerHTML = '<div class="gantt__empty">Нет данных для отображения</div>';
@@ -516,6 +585,8 @@ function buildGantt(container, tasks, labelFormatter) {
     row.appendChild(track);
     container.appendChild(row);
   });
+
+  ensureGanttNowMarker(container);
 }
 
 function buildTaskPayload(task, overrides) {
@@ -1040,6 +1111,8 @@ function buildOperatorsGantt(container, tasksByOperator) {
     rowEl.appendChild(track);
     container.appendChild(rowEl);
   });
+
+  ensureGanttNowMarker(container);
 }
 
 function renderOperatorsGantt() {
@@ -2028,6 +2101,8 @@ document.addEventListener('click', (event) => {
   if (!event.target.closest('button')) return;
   scheduleAutoRefresh();
 });
+
+window.addEventListener('resize', () => updateAllGanttNowMarkers());
 
 tasksDateInput.value = toLocalInputValue(new Date());
 

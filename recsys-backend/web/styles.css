@@ -321,6 +321,7 @@ select {
   border-radius: 16px;
   overflow: hidden;
   --gantt-hours: 13;
+  position: relative;
 }
 
 .gantt__header {
@@ -330,6 +331,7 @@ select {
   border-bottom: 1px solid var(--border);
   font-size: 12px;
   color: var(--muted);
+  position: relative;
 }
 
 .gantt__header div {
@@ -373,6 +375,51 @@ select {
 
 .gantt__label small .gantt__label-title {
   font-weight: 600;
+}
+
+.gantt__now-marker {
+  position: absolute;
+  top: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.gantt__now-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff8a5b, #ffd580);
+  color: #1c1c1c;
+  font-weight: 600;
+  font-size: 11px;
+  box-shadow: 0 6px 14px rgba(255, 138, 91, 0.35);
+}
+
+.gantt__now-arrow {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid #ff8a5b;
+  filter: drop-shadow(0 4px 8px rgba(255, 138, 91, 0.35));
+}
+
+.gantt__now-line {
+  position: absolute;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(255, 138, 91, 0.9), rgba(255, 138, 91, 0.35));
+  box-shadow: 0 0 10px rgba(255, 138, 91, 0.4);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.gantt__now-marker.is-hidden,
+.gantt__now-line.is-hidden {
+  opacity: 0;
 }
 
 .toast-container {
