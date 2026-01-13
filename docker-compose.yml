@@ -12,5 +12,26 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  api:
+    build:
+      context: ./recsys-backend
+      dockerfile: Dockerfile
+    container_name: recsys-api
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - ./recsys-backend/.env
+    environment:
+      # переопределение значений из .env для запуска внутри compose
+      APP_ADDR: ":8080"
+      DB_HOST: "db"
+      DB_PORT: "5432"
+      DB_NAME: "recsys"
+      DB_USER: "recsys_user"
+      DB_PASSWORD: "recsys_pass"
+    ports:
+      - "8080:8080"
+
 volumes:
   pgdata:
