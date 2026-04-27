@@ -161,6 +161,10 @@ func (h *Handlers) GetUser(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := h.repos.GetUser(r.Context(), login)
 	if err != nil {
+		if isNotFound(err) {
+			writeJSON(w, 404, map[string]any{"error": "user not found"})
+			return
+		}
 		writeJSON(w, 500, map[string]any{"error": err.Error()})
 		return
 	}
@@ -325,6 +329,10 @@ func (h *Handlers) GetWorkspace(w http.ResponseWriter, r *http.Request) {
 	}
 	item, err := h.repos.GetWorkspace(r.Context(), id)
 	if err != nil {
+		if isNotFound(err) {
+			writeJSON(w, 404, map[string]any{"error": "workspace not found"})
+			return
+		}
 		writeJSON(w, 500, map[string]any{"error": err.Error()})
 		return
 	}
@@ -875,8 +883,8 @@ func (h *Handlers) CreateDevice(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]any{"error": "bad json"})
 		return
 	}
-	if req.Name == "" || req.PhotoURL == "" {
-		writeJSON(w, 400, map[string]any{"error": "name and photo_url required"})
+	if req.Name == "" {
+		writeJSON(w, 400, map[string]any{"error": "name required"})
 		return
 	}
 	id, err := h.repos.CreateDevice(r.Context(), storage.Device{
@@ -1357,6 +1365,10 @@ func (h *Handlers) GetDeviceTaskType(w http.ResponseWriter, r *http.Request) {
 	}
 	item, err := h.repos.GetDeviceTaskType(r.Context(), id)
 	if err != nil {
+		if isNotFound(err) {
+			writeJSON(w, 404, map[string]any{"error": "device task type not found"})
+			return
+		}
 		writeJSON(w, 500, map[string]any{"error": err.Error()})
 		return
 	}
@@ -1477,8 +1489,8 @@ func (h *Handlers) CreateDeviceTask(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]any{"error": "bad json"})
 		return
 	}
-	if req.Name == "" || req.PhotoURL == "" || req.DocNum == "" {
-		writeJSON(w, 400, map[string]any{"error": "name, photo_url, doc_num required"})
+	if req.Name == "" || req.DocNum == "" {
+		writeJSON(w, 400, map[string]any{"error": "name and doc_num required"})
 		return
 	}
 	completion := req.CompletionMark
@@ -1528,6 +1540,10 @@ func (h *Handlers) GetDeviceTask(w http.ResponseWriter, r *http.Request) {
 	}
 	item, err := h.repos.GetDeviceTask(r.Context(), id)
 	if err != nil {
+		if isNotFound(err) {
+			writeJSON(w, 404, map[string]any{"error": "device task not found"})
+			return
+		}
 		writeJSON(w, 500, map[string]any{"error": err.Error()})
 		return
 	}

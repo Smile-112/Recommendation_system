@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"sync"
@@ -11,20 +12,29 @@ import (
 	"recsys-backend/internal/storage"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 )
+
+const sessionTTL = 24 * time.Hour
+
+type sessionEntry struct {
+	user      storage.User
+	expiresAt time.Time
+}
 
 type Handlers struct {
 	repos      *storage.Repos
 	planner    *service.Planner
-	sessions   map[string]storage.User
+	sessions   map[string]sessionEntry
 	sessionsMu sync.RWMutex
+	registerMu sync.Mutex
 }
 
 func NewHandlers(repos *storage.Repos, planner *service.Planner) *Handlers {
 	return &Handlers{
 		repos:    repos,
 		planner:  planner,
-		sessions: make(map[string]storage.User),
+		sessions: make(map[string]sessionEntry),
 	}
 }
 
@@ -143,4 +153,8 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+func isNotFound(err error) bool {
+	return errors.Is(err, pgx.ErrNoRows)
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"net/http"
 	"strings"
+	"time"
 
 	"recsys-backend/internal/storage"
 
@@ -38,17 +39,23 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	passwordHash, err := hashPassword(req.Password)
+	if err != nil {
+		writeJSON(w, 500, map[string]any{"error": err.Error()})
+		return
+	}
+
+	// Lock to prevent a race where two concurrent first-registrations both
+	// read userCount == 0 and both become admins.
+	h.registerMu.Lock()
+	defer h.registerMu.Unlock()
+
 	userCount, err := h.repos.CountUsers(r.Context())
 	if err != nil {
 		writeJSON(w, 500, map[string]any{"error": err.Error()})
 		return
 	}
 	nextID, err := h.repos.NextUserID(r.Context())
-	if err != nil {
-		writeJSON(w, 500, map[string]any{"error": err.Error()})
-		return
-	}
-	passwordHash, err := hashPassword(req.Password)
 	if err != nil {
 		writeJSON(w, 500, map[string]any{"error": err.Error()})
 		return
@@ -136,9 +143,18 @@ func (h *Handlers) currentUser(r *http.Request) (storage.User, bool) {
 		return storage.User{}, false
 	}
 	h.sessionsMu.RLock()
-	defer h.sessionsMu.RUnlock()
-	user, ok := h.sessions[token]
-	return user, ok
+	entry, ok := h.sessions[token]
+	h.sessionsMu.RUnlock()
+	if !ok {
+		return storage.User{}, false
+	}
+	if time.Now().After(entry.expiresAt) {
+		h.sessionsMu.Lock()
+		delete(h.sessions, token)
+		h.sessionsMu.Unlock()
+		return storage.User{}, false
+	}
+	return entry.user, true
 }
 
 func parseToken(r *http.Request) string {
@@ -160,7 +176,7 @@ func (h *Handlers) issueToken(user storage.User) (string, error) {
 	}
 	token := base64.RawURLEncoding.EncodeToString(raw)
 	h.sessionsMu.Lock()
-	h.sessions[token] = user
+	h.sessions[token] = sessionEntry{user: user, expiresAt: time.Now().Add(sessionTTL)}
 	h.sessionsMu.Unlock()
 	return token, nil
 }

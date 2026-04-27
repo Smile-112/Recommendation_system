@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>500 — Сбой экструдера · Halomeny</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    .error-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      gap: 28px;
+    }
+
+    .error-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .error-brand__icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #efefef;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .error-brand__name {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .error-card {
+      text-align: center;
+      max-width: 520px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .error-code {
+      font-size: 100px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -6px;
+      background: linear-gradient(135deg, #f5b5b5 0%, #e88080 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      user-select: none;
+    }
+
+    .error-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .error-desc {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 380px;
+    }
+
+    .error-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 4px;
+    }
+
+    .error-actions a,
+    .error-actions button {
+      text-decoration: none;
+      font-size: 15px;
+      padding: 10px 22px;
+    }
+
+    .error-hint {
+      font-size: 13px;
+      color: var(--muted);
+      background: #fafafa;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      max-width: 380px;
+      width: 100%;
+    }
+
+    .error-hint code {
+      font-family: "Consolas", "Courier New", monospace;
+      background: #f0f0f0;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="error-page">
+
+    <a href="/" class="error-brand">
+      <div class="error-brand__icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 64 64">
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#2b2b2b"/>
+              <stop offset="1" stop-color="#5a5a5a"/>
+            </linearGradient>
+          </defs>
+          <rect x="4" y="4" width="56" height="56" rx="12" fill="url(#lg)"/>
+          <rect x="16" y="14" width="18" height="18" rx="4" fill="#f4f4f4"/>
+          <rect x="36" y="14" width="12" height="36" rx="6" fill="#f4f4f4" opacity="0.9"/>
+          <path d="M20 40h20v6H20z" fill="#f4f4f4" opacity="0.9"/>
+          <path d="M16 36c6-8 18-8 24 0" fill="none" stroke="#9ad24d" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="24" cy="26" r="4" fill="#f4f4f4"/>
+          <circle cx="44" cy="42" r="6" fill="#f4f4f4"/>
+          <path d="M44 38v4l3 2" stroke="#2b2b2b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="error-brand__name">Halomeny</span>
+    </a>
+
+    <div class="card error-card">
+
+      <!-- Illustration: 3D printer with extruder jam and sparks -->
+      <svg width="180" height="170" viewBox="0 0 180 170" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- Broken filament line (dashed, red) -->
+        <line x1="90" y1="2" x2="90" y2="14" stroke="#f47a7a" stroke-width="3" stroke-linecap="round" stroke-dasharray="3,3"/>
+
+        <!-- Top rail (dark red tint to show error state) -->
+        <rect x="14" y="18" width="152" height="13" rx="6" fill="#2e2e2e"/>
+        <!-- Print head (error red) -->
+        <rect x="68" y="14" width="44" height="20" rx="7" fill="#b91c1c"/>
+        <!-- Nozzle -->
+        <path d="M81 31 L90 44 L99 31Z" fill="#991b1b"/>
+
+        <!-- Sparks / explosion from nozzle -->
+        <line x1="90" y1="44" x2="74" y2="62" stroke="#f47a7a" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="90" y1="44" x2="90" y2="65" stroke="#f5f25b" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="90" y1="44" x2="106" y2="62" stroke="#f47a7a" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="90" y1="44" x2="68" y2="58" stroke="#f5f25b" stroke-width="2"   stroke-linecap="round"/>
+        <line x1="90" y1="44" x2="112" y2="58" stroke="#f47a7a" stroke-width="2"  stroke-linecap="round"/>
+        <line x1="90" y1="44" x2="80"  y2="68" stroke="#f5f25b" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="90" y1="44" x2="100" y2="68" stroke="#f47a7a" stroke-width="1.5" stroke-linecap="round"/>
+
+        <!-- Spark dots -->
+        <circle cx="73"  cy="63" r="3" fill="#f47a7a" opacity="0.75"/>
+        <circle cx="90"  cy="67" r="2.5" fill="#f5f25b" opacity="0.8"/>
+        <circle cx="107" cy="63" r="3" fill="#f47a7a" opacity="0.75"/>
+        <circle cx="67"  cy="59" r="2" fill="#f5f25b" opacity="0.6"/>
+        <circle cx="113" cy="59" r="2" fill="#f47a7a" opacity="0.6"/>
+
+        <!-- Left post -->
+        <rect x="14"  y="31" width="12" height="110" rx="5" fill="#ebebeb" stroke="#d9d9d9" stroke-width="1"/>
+        <!-- Right post -->
+        <rect x="154" y="31" width="12" height="110" rx="5" fill="#ebebeb" stroke="#d9d9d9" stroke-width="1"/>
+        <!-- Bottom base -->
+        <rect x="14"  y="141" width="152" height="13" rx="6" fill="#ebebeb" stroke="#d9d9d9" stroke-width="1"/>
+        <!-- Build plate -->
+        <rect x="28"  y="131" width="124" height="10" rx="4" fill="#d8d8d8"/>
+
+        <!-- Layer 1 – base (gray, OK) -->
+        <rect x="36" y="120" width="108" height="9" rx="4" fill="#c8c8c8"/>
+        <!-- Layer 2 (green, OK) -->
+        <rect x="38" y="109" width="104" height="9" rx="4" fill="#7ee082"/>
+        <!-- Layer 3 (slightly offset – starting to fail) -->
+        <rect x="44" y="98" width="92"  height="9" rx="4" fill="#f47a7a" opacity="0.65"/>
+        <!-- Layer 4 (more misaligned, error) -->
+        <rect x="50" y="87" width="80"  height="9" rx="4" fill="#f47a7a" opacity="0.45"/>
+        <!-- X mark on broken layers -->
+        <line x1="56" y1="93" x2="68" y2="100" stroke="#b91c1c" stroke-width="2" stroke-linecap="round"/>
+        <line x1="68" y1="93" x2="56" y2="100" stroke="#b91c1c" stroke-width="2" stroke-linecap="round"/>
+
+        <!-- Error badge -->
+        <circle cx="162" cy="90" r="15" fill="#fdeaea" stroke="#f47a7a" stroke-width="2"/>
+        <text x="162" y="96" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" font-weight="800" fill="#b91c1c">!</text>
+      </svg>
+
+      <div class="error-code">500</div>
+      <div class="error-title">Сбой экструдера</div>
+      <p class="error-desc">
+        Произошла непредвиденная ошибка на сервере. Попробуйте обновить страницу или вернитесь позже.
+      </p>
+
+      <div class="error-actions">
+        <button class="button" onclick="location.reload()">Обновить страницу</button>
+        <a href="/" class="button button--ghost">На главную</a>
+      </div>
+
+      <p class="error-hint">
+        Если ошибка повторяется, проверьте состояние API по адресу
+        <code>/health</code> или обратитесь к администратору.
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>
