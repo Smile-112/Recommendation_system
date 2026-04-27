@@ -28,6 +28,9 @@ type RecomputeResult struct {
 const (
 	workDayStartHour = 9
 	workDayEndHour   = 22
+	// maxScheduleAhead limits how far into the future the planner looks,
+	// preventing infinite loops when there is no deadline.
+	maxScheduleAhead = 365 * 24 * time.Hour
 )
 
 type interval struct {
@@ -54,7 +57,6 @@ func (p *Planner) Recompute(ctx context.Context, workspaceID int64) (RecomputeRe
 		plannedIDs[t.ID] = struct{}{}
 	}
 
-	// сгруппируем занятость по оператору
 	operatorBusy := map[int64][]interval{}
 	for _, b := range busy {
 		operatorBusy[b.OperatorID] = append(operatorBusy[b.OperatorID], interval{start: b.Start, end: b.End})
@@ -79,10 +81,11 @@ func (p *Planner) Recompute(ctx context.Context, workspaceID int64) (RecomputeRe
 		}
 	}
 
-	// сортировка по дедлайну, затем по приоритету
+	// farFuture is computed once so the sort comparator is deterministic.
+	farFuture := time.Now().Add(maxScheduleAhead)
 	sort.Slice(tasks, func(i, j int) bool {
-		di := farFutureIfNil(tasks[i].Deadline)
-		dj := farFutureIfNil(tasks[j].Deadline)
+		di := coalesceDeadline(tasks[i].Deadline, farFuture)
+		dj := coalesceDeadline(tasks[j].Deadline, farFuture)
 		if !di.Equal(dj) {
 			return di.Before(dj)
 		}
@@ -99,7 +102,6 @@ func (p *Planner) Recompute(ctx context.Context, workspaceID int64) (RecomputeRe
 			continue
 		}
 
-		// общий блок = setup + print + unload
 		total := t.SetupTime + t.Duration + t.UnloadTime
 
 		start, end, ok := findNextAvailableSlot(
@@ -114,8 +116,6 @@ func (p *Planner) Recompute(ctx context.Context, workspaceID int64) (RecomputeRe
 			continue
 		}
 
-		// дедлайн: если хотите запрещать просрочку — тут можно "continue"
-		// (пока просто пометим как unscheduled, если дедлайн есть и нарушен)
 		if err := p.repos.UpdateDeviceTaskPlan(ctx, t.ID, start, end); err != nil {
 			return RecomputeResult{}, err
 		}
@@ -129,15 +129,17 @@ func (p *Planner) Recompute(ctx context.Context, workspaceID int64) (RecomputeRe
 	return RecomputeResult{Updated: updated, UnscheduledIDs: unscheduled}, nil
 }
 
-func farFutureIfNil(t *time.Time) time.Time {
+func coalesceDeadline(t *time.Time, fallback time.Time) time.Time {
 	if t == nil {
-		return time.Now().Add(365 * 24 * time.Hour)
+		return fallback
 	}
 	return *t
 }
 
-// Находит ближайший старт, где [start, start+dur] не пересекается с занятостью оператора и устройства,
-// учитывая рабочие часы.
+// findNextAvailableSlot finds the earliest window of length dur starting at or after
+// start where neither deviceBusy nor operatorBusy is occupied, within work hours.
+// Returns false when no such window exists before the effective deadline (or
+// maxScheduleAhead if no deadline is set).
 func findNextAvailableSlot(
 	start time.Time,
 	dur time.Duration,
@@ -146,6 +148,12 @@ func findNextAvailableSlot(
 	deadline *time.Time,
 ) (time.Time, time.Time, bool) {
 	cur := alignToWorkday(start)
+
+	maxDate := start.Add(maxScheduleAhead)
+	if deadline != nil && deadline.Before(maxDate) {
+		maxDate = *deadline
+	}
+
 	busy := append([]interval{}, deviceBusy...)
 	busy = append(busy, operatorBusy...)
 	sort.Slice(busy, func(i, j int) bool {
@@ -153,7 +161,7 @@ func findNextAvailableSlot(
 	})
 
 	for {
-		if deadline != nil && cur.After(*deadline) {
+		if cur.After(maxDate) {
 			return time.Time{}, time.Time{}, false
 		}
 		cur = alignToWorkday(cur)
@@ -174,7 +182,7 @@ func findNextAvailableSlot(
 		if conflict {
 			continue
 		}
-		if deadline != nil && end.After(*deadline) {
+		if end.After(maxDate) {
 			return time.Time{}, time.Time{}, false
 		}
 		return cur, end, true
