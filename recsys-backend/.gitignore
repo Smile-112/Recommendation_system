@@ -1,0 +1,10 @@
+# compiled binaries
+app
+recsys
+*.exe
+
+# environment
+.env
+
+# test cache
+*.test
