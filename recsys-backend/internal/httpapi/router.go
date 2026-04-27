@@ -1,7 +1,12 @@
 package httpapi
 
 import (
+	"log"
 	"net/http"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -19,6 +24,7 @@ func NewRouter(h *Handlers) http.Handler {
 		AllowCredentials: false,
 		MaxAge:           300,
 	}))
+	r.Use(panicRecoveryMiddleware)
 
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
@@ -139,9 +145,75 @@ func NewRouter(h *Handlers) http.Handler {
 		})
 
 		api.Post("/plans/recompute", h.RecomputePlan)
+
+		// Catch-all for unknown API endpoints → JSON 404.
+		api.NotFound(func(w http.ResponseWriter, r *http.Request) {
+			writeJSON(w, http.StatusNotFound, map[string]any{"error": "endpoint not found"})
+		})
+		api.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+			writeJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
+		})
 	})
 
-	r.Handle("/*", http.FileServer(http.Dir("web")))
+	r.Handle("/*", staticFileHandler("web"))
 
 	return r
+}
+
+// panicRecoveryMiddleware catches panics, logs them, and returns an appropriate
+// error response: HTML 500 page for browser requests, JSON for API calls.
+func panicRecoveryMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Printf("panic: %v [%s %s]", rec, r.Method, r.URL.Path)
+				if isAPIPath(r) {
+					writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "internal server error"})
+					return
+				}
+				serveErrorPage(w, http.StatusInternalServerError, "web/500.html")
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
+// staticFileHandler serves files from webDir. Unknown paths get a custom 404 page
+// instead of Go's plain-text "404 page not found".
+func staticFileHandler(webDir string) http.Handler {
+	fs := http.FileServer(http.Dir(webDir))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		uPath := path.Clean("/" + strings.TrimPrefix(r.URL.Path, "/"))
+		fsPath := filepath.Join(webDir, filepath.FromSlash(uPath))
+
+		info, err := os.Stat(fsPath)
+		if err != nil {
+			serveErrorPage(w, http.StatusNotFound, filepath.Join(webDir, "404.html"))
+			return
+		}
+		if info.IsDir() {
+			if _, err := os.Stat(filepath.Join(fsPath, "index.html")); err != nil {
+				serveErrorPage(w, http.StatusNotFound, filepath.Join(webDir, "404.html"))
+				return
+			}
+		}
+		fs.ServeHTTP(w, r)
+	})
+}
+
+// serveErrorPage writes an HTML error file with the given HTTP status code.
+func serveErrorPage(w http.ResponseWriter, code int, htmlFile string) {
+	content, err := os.ReadFile(htmlFile)
+	if err != nil {
+		http.Error(w, http.StatusText(code), code)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.WriteHeader(code)
+	_, _ = w.Write(content)
+}
+
+func isAPIPath(r *http.Request) bool {
+	return strings.HasPrefix(r.URL.Path, "/api/")
 }

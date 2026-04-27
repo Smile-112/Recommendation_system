@@ -275,15 +275,9 @@ function closeModal(modal) {
 }
 
 function setStatus(ok) {
-  if (ok) {
-    statusBadge.textContent = 'API: доступно';
-    statusBadge.style.background = '#e9f7ec';
-    statusBadge.style.color = '#1d7b3d';
-  } else {
-    statusBadge.textContent = 'API: недоступно';
-    statusBadge.style.background = '#fdeaea';
-    statusBadge.style.color = '#b91c1c';
-  }
+  statusBadge.textContent = ok ? 'API: доступно' : 'API: недоступно';
+  statusBadge.classList.toggle('pill--ok',    ok);
+  statusBadge.classList.toggle('pill--error', !ok);
 }
 
 async function checkHealth() {
