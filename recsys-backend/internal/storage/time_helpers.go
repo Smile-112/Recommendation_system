@@ -7,6 +7,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+func nullInt64(value int64) any {
+	if value <= 0 {
+		return nil
+	}
+	return value
+}
+
 func timeToDuration(t pgtype.Time) time.Duration {
 	if !t.Valid {
 		return 0

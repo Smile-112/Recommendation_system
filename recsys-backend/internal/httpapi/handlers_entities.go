@@ -68,22 +68,23 @@ type DeviceTaskTypeRequest struct {
 }
 
 type DeviceTaskRequest struct {
-	Name             string     `json:"name"`
-	Deadline         *time.Time `json:"deadline"`
-	DurationMin      int        `json:"duration_min"`
-	SetupTimeMin     int        `json:"setup_time_min"`
-	UnloadTimeMin    int        `json:"unload_time_min"`
-	NeedOperator     bool       `json:"need_operator"`
-	PhotoURL         string     `json:"photo_url"`
-	PlanStart        *time.Time `json:"plan_start"`
-	PlanEnd          *time.Time `json:"plan_end"`
-	DocNum           string     `json:"doc_num"`
-	CompletionMark   string     `json:"completion_mark"`
-	AddInRecSystem   *bool      `json:"add_in_rec_system"`
-	DeviceTaskTypeID int64      `json:"device_task_type_id"`
-	OperatorID       int64      `json:"operator_id"`
-	DeviceID         int64      `json:"device_id"`
-	PriorityID       int64      `json:"priority_id"`
+	Name                      string     `json:"name"`
+	Deadline                  *time.Time `json:"deadline"`
+	DurationMin               int        `json:"duration_min"`
+	SetupTimeMin              int        `json:"setup_time_min"`
+	UnloadTimeMin             int        `json:"unload_time_min"`
+	NeedOperator              bool       `json:"need_operator"`
+	PhotoURL                  string     `json:"photo_url"`
+	PlanStart                 *time.Time `json:"plan_start"`
+	PlanEnd                   *time.Time `json:"plan_end"`
+	DocNum                    string     `json:"doc_num"`
+	CompletionMark            string     `json:"completion_mark"`
+	AddInRecSystem            *bool      `json:"add_in_rec_system"`
+	EquipmentCharacteristicID int64      `json:"equipment_characteristic_id"`
+	DeviceTaskTypeID          int64      `json:"device_task_type_id"`
+	OperatorID                int64      `json:"operator_id"`
+	DeviceID                  int64      `json:"device_id"`
+	PriorityID                int64      `json:"priority_id"`
 }
 
 type UserTaskRequest struct {
@@ -94,6 +95,17 @@ type UserTaskRequest struct {
 	CompletionMark *bool      `json:"completion_mark"`
 	DeviceTaskID   *int64     `json:"device_task_id"`
 	OperatorID     int64      `json:"operator_id"`
+}
+
+type PlanningWeightRequest struct {
+	CriterionCode string  `json:"criterion_code"`
+	Weight        float64 `json:"weight"`
+}
+
+type DeviceCharacteristicScoreRequest struct {
+	DeviceID                  int64   `json:"device_id"`
+	EquipmentCharacteristicID int64   `json:"equipment_characteristic_id"`
+	Score                     float64 `json:"score"`
 }
 
 func parseIDParam(r *http.Request, key string) (int64, error) {
@@ -1498,23 +1510,24 @@ func (h *Handlers) CreateDeviceTask(w http.ResponseWriter, r *http.Request) {
 		completion = "false"
 	}
 	id, err := h.repos.CreateDeviceTask(r.Context(), storage.DeviceTask{
-		Name:             req.Name,
-		Deadline:         req.Deadline,
-		Duration:         minutesToDuration(req.DurationMin),
-		SetupTime:        minutesToDuration(req.SetupTimeMin),
-		UnloadTime:       minutesToDuration(req.UnloadTimeMin),
-		NeedOperator:     req.NeedOperator,
-		PhotoURL:         req.PhotoURL,
-		PlanStart:        req.PlanStart,
-		PlanEnd:          req.PlanEnd,
-		DocNum:           req.DocNum,
-		CompletionMark:   completion,
-		AddInRecSystem:   req.AddInRecSystem,
-		DeviceTaskTypeID: req.DeviceTaskTypeID,
-		WorkspaceID:      workspaceID,
-		OperatorID:       req.OperatorID,
-		DeviceID:         req.DeviceID,
-		PriorityID:       req.PriorityID,
+		Name:                      req.Name,
+		Deadline:                  req.Deadline,
+		Duration:                  minutesToDuration(req.DurationMin),
+		SetupTime:                 minutesToDuration(req.SetupTimeMin),
+		UnloadTime:                minutesToDuration(req.UnloadTimeMin),
+		NeedOperator:              req.NeedOperator,
+		PhotoURL:                  req.PhotoURL,
+		PlanStart:                 req.PlanStart,
+		PlanEnd:                   req.PlanEnd,
+		DocNum:                    req.DocNum,
+		CompletionMark:            completion,
+		AddInRecSystem:            req.AddInRecSystem,
+		EquipmentCharacteristicID: req.EquipmentCharacteristicID,
+		DeviceTaskTypeID:          req.DeviceTaskTypeID,
+		WorkspaceID:               workspaceID,
+		OperatorID:                req.OperatorID,
+		DeviceID:                  req.DeviceID,
+		PriorityID:                req.PriorityID,
 	})
 	if err != nil {
 		writeJSON(w, 500, map[string]any{"error": err.Error()})
@@ -1548,21 +1561,22 @@ func (h *Handlers) GetDeviceTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, DeviceTaskDTO{
-		ID:            item.ID,
-		Name:          item.Name,
-		Deadline:      item.Deadline,
-		DurationMin:   int(item.Duration.Minutes()),
-		SetupTimeMin:  int(item.SetupTime.Minutes()),
-		UnloadTimeMin: int(item.UnloadTime.Minutes()),
-		NeedOperator:  item.NeedOperator,
-		PlanStart:     item.PlanStart,
-		PlanEnd:       item.PlanEnd,
-		DocNum:        item.DocNum,
-		PriorityID:    item.PriorityID,
-		OperatorID:    item.OperatorID,
-		DeviceID:      item.DeviceID,
-		TaskTypeID:    item.DeviceTaskTypeID,
-		WorkspaceID:   item.WorkspaceID,
+		ID:                        item.ID,
+		Name:                      item.Name,
+		Deadline:                  item.Deadline,
+		DurationMin:               int(item.Duration.Minutes()),
+		SetupTimeMin:              int(item.SetupTime.Minutes()),
+		UnloadTimeMin:             int(item.UnloadTime.Minutes()),
+		NeedOperator:              item.NeedOperator,
+		PlanStart:                 item.PlanStart,
+		PlanEnd:                   item.PlanEnd,
+		DocNum:                    item.DocNum,
+		PriorityID:                item.PriorityID,
+		OperatorID:                item.OperatorID,
+		DeviceID:                  item.DeviceID,
+		EquipmentCharacteristicID: item.EquipmentCharacteristicID,
+		TaskTypeID:                item.DeviceTaskTypeID,
+		WorkspaceID:               item.WorkspaceID,
 	})
 }
 
@@ -1604,24 +1618,25 @@ func (h *Handlers) UpdateDeviceTask(w http.ResponseWriter, r *http.Request) {
 		completion = "false"
 	}
 	if err := h.repos.UpdateDeviceTask(r.Context(), storage.DeviceTask{
-		ID:               id,
-		Name:             req.Name,
-		Deadline:         req.Deadline,
-		Duration:         minutesToDuration(req.DurationMin),
-		SetupTime:        minutesToDuration(req.SetupTimeMin),
-		UnloadTime:       minutesToDuration(req.UnloadTimeMin),
-		NeedOperator:     req.NeedOperator,
-		PhotoURL:         req.PhotoURL,
-		PlanStart:        req.PlanStart,
-		PlanEnd:          req.PlanEnd,
-		DocNum:           req.DocNum,
-		CompletionMark:   completion,
-		AddInRecSystem:   req.AddInRecSystem,
-		DeviceTaskTypeID: req.DeviceTaskTypeID,
-		WorkspaceID:      workspaceID,
-		OperatorID:       req.OperatorID,
-		DeviceID:         req.DeviceID,
-		PriorityID:       req.PriorityID,
+		ID:                        id,
+		Name:                      req.Name,
+		Deadline:                  req.Deadline,
+		Duration:                  minutesToDuration(req.DurationMin),
+		SetupTime:                 minutesToDuration(req.SetupTimeMin),
+		UnloadTime:                minutesToDuration(req.UnloadTimeMin),
+		NeedOperator:              req.NeedOperator,
+		PhotoURL:                  req.PhotoURL,
+		PlanStart:                 req.PlanStart,
+		PlanEnd:                   req.PlanEnd,
+		DocNum:                    req.DocNum,
+		CompletionMark:            completion,
+		AddInRecSystem:            req.AddInRecSystem,
+		EquipmentCharacteristicID: req.EquipmentCharacteristicID,
+		DeviceTaskTypeID:          req.DeviceTaskTypeID,
+		WorkspaceID:               workspaceID,
+		OperatorID:                req.OperatorID,
+		DeviceID:                  req.DeviceID,
+		PriorityID:                req.PriorityID,
 	}); err != nil {
 		writeJSON(w, 500, map[string]any{"error": err.Error()})
 		return
@@ -1783,4 +1798,96 @@ func (h *Handlers) DeleteUserTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, map[string]any{"ok": true})
+}
+
+func (h *Handlers) ListPlanningCriteria(w http.ResponseWriter, r *http.Request) {
+	items, err := h.repos.ListPlanningCriteria(r.Context())
+	if err != nil {
+		writeJSON(w, 500, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, 200, items)
+}
+
+func (h *Handlers) ListPlanningWeights(w http.ResponseWriter, r *http.Request) {
+	workspaceID, err := parseIDParam(r, "workspaceId")
+	if err != nil || workspaceID <= 0 {
+		writeJSON(w, 400, map[string]any{"error": "invalid workspaceId"})
+		return
+	}
+	items, err := h.repos.ListPlanningWeights(r.Context(), workspaceID)
+	if err != nil {
+		writeJSON(w, 500, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, 200, items)
+}
+
+func (h *Handlers) UpsertPlanningWeight(w http.ResponseWriter, r *http.Request) {
+	workspaceID, err := parseIDParam(r, "workspaceId")
+	if err != nil || workspaceID <= 0 {
+		writeJSON(w, 400, map[string]any{"error": "invalid workspaceId"})
+		return
+	}
+	var req PlanningWeightRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeJSON(w, 400, map[string]any{"error": "bad json"})
+		return
+	}
+	if strings.TrimSpace(req.CriterionCode) == "" {
+		writeJSON(w, 400, map[string]any{"error": "criterion_code required"})
+		return
+	}
+	id, err := h.repos.UpsertPlanningWeight(r.Context(), storage.PlanningWeight{
+		WorkspaceID:   workspaceID,
+		CriterionCode: req.CriterionCode,
+		Weight:        req.Weight,
+	})
+	if err != nil {
+		writeJSON(w, 500, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, 200, map[string]any{"id": id})
+}
+
+func (h *Handlers) ListDeviceCharacteristicScores(w http.ResponseWriter, r *http.Request) {
+	workspaceID, err := parseIDParam(r, "workspaceId")
+	if err != nil || workspaceID <= 0 {
+		writeJSON(w, 400, map[string]any{"error": "invalid workspaceId"})
+		return
+	}
+	items, err := h.repos.ListDeviceCharacteristicScores(r.Context(), workspaceID)
+	if err != nil {
+		writeJSON(w, 500, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, 200, items)
+}
+
+func (h *Handlers) UpsertDeviceCharacteristicScore(w http.ResponseWriter, r *http.Request) {
+	workspaceID, err := parseIDParam(r, "workspaceId")
+	if err != nil || workspaceID <= 0 {
+		writeJSON(w, 400, map[string]any{"error": "invalid workspaceId"})
+		return
+	}
+	var req DeviceCharacteristicScoreRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeJSON(w, 400, map[string]any{"error": "bad json"})
+		return
+	}
+	if req.DeviceID <= 0 || req.EquipmentCharacteristicID <= 0 {
+		writeJSON(w, 400, map[string]any{"error": "device_id and equipment_characteristic_id required"})
+		return
+	}
+	id, err := h.repos.UpsertDeviceCharacteristicScore(r.Context(), storage.DeviceCharacteristicScore{
+		WorkspaceID:               workspaceID,
+		DeviceID:                  req.DeviceID,
+		EquipmentCharacteristicID: req.EquipmentCharacteristicID,
+		Score:                     req.Score,
+	})
+	if err != nil {
+		writeJSON(w, 500, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, 200, map[string]any{"id": id})
 }

@@ -40,21 +40,22 @@ func NewHandlers(repos *storage.Repos, planner *service.Planner) *Handlers {
 
 // DeviceTaskDTO — DTO для Swagger (без time.Duration)
 type DeviceTaskDTO struct {
-	ID            int64      `json:"id"`
-	Name          string     `json:"name"`
-	Deadline      *time.Time `json:"deadline"`
-	DurationMin   int        `json:"duration_min"`
-	SetupTimeMin  int        `json:"setup_time_min"`
-	UnloadTimeMin int        `json:"unload_time_min"`
-	NeedOperator  bool       `json:"need_operator"`
-	PlanStart     *time.Time `json:"plan_start"`
-	PlanEnd       *time.Time `json:"plan_end"`
-	DocNum        string     `json:"doc_num"`
-	PriorityID    int64      `json:"priority_id"`
-	OperatorID    int64      `json:"operator_id"`
-	DeviceID      int64      `json:"device_id"`
-	TaskTypeID    int64      `json:"device_task_type_id"`
-	WorkspaceID   int64      `json:"workspace_id"`
+	ID                        int64      `json:"id"`
+	Name                      string     `json:"name"`
+	Deadline                  *time.Time `json:"deadline"`
+	DurationMin               int        `json:"duration_min"`
+	SetupTimeMin              int        `json:"setup_time_min"`
+	UnloadTimeMin             int        `json:"unload_time_min"`
+	NeedOperator              bool       `json:"need_operator"`
+	PlanStart                 *time.Time `json:"plan_start"`
+	PlanEnd                   *time.Time `json:"plan_end"`
+	DocNum                    string     `json:"doc_num"`
+	PriorityID                int64      `json:"priority_id"`
+	OperatorID                int64      `json:"operator_id"`
+	DeviceID                  int64      `json:"device_id"`
+	EquipmentCharacteristicID int64      `json:"equipment_characteristic_id"`
+	TaskTypeID                int64      `json:"device_task_type_id"`
+	WorkspaceID               int64      `json:"workspace_id"`
 }
 
 // Health godoc
@@ -99,21 +100,22 @@ func (h *Handlers) ListDeviceTasks(w http.ResponseWriter, r *http.Request) {
 	dtos := make([]DeviceTaskDTO, 0, len(tasks))
 	for _, t := range tasks {
 		dtos = append(dtos, DeviceTaskDTO{
-			ID:            t.ID,
-			Name:          t.Name,
-			Deadline:      t.Deadline,
-			DurationMin:   int(t.Duration.Minutes()),
-			SetupTimeMin:  int(t.SetupTime.Minutes()),
-			UnloadTimeMin: int(t.UnloadTime.Minutes()),
-			NeedOperator:  t.NeedOperator,
-			PlanStart:     t.PlanStart,
-			PlanEnd:       t.PlanEnd,
-			DocNum:        t.DocNum,
-			PriorityID:    t.PriorityID,
-			OperatorID:    t.OperatorID,
-			DeviceID:      t.DeviceID,
-			TaskTypeID:    t.DeviceTaskTypeID,
-			WorkspaceID:   t.WorkspaceID,
+			ID:                        t.ID,
+			Name:                      t.Name,
+			Deadline:                  t.Deadline,
+			DurationMin:               int(t.Duration.Minutes()),
+			SetupTimeMin:              int(t.SetupTime.Minutes()),
+			UnloadTimeMin:             int(t.UnloadTime.Minutes()),
+			NeedOperator:              t.NeedOperator,
+			PlanStart:                 t.PlanStart,
+			PlanEnd:                   t.PlanEnd,
+			DocNum:                    t.DocNum,
+			PriorityID:                t.PriorityID,
+			OperatorID:                t.OperatorID,
+			DeviceID:                  t.DeviceID,
+			EquipmentCharacteristicID: t.EquipmentCharacteristicID,
+			TaskTypeID:                t.DeviceTaskTypeID,
+			WorkspaceID:               t.WorkspaceID,
 		})
 	}
 

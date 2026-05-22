@@ -132,16 +132,19 @@ CREATE TABLE "device_task" (
   "dvctsk_timetocomplite" TIME NOT NULL,
   "dvctsk_complitionmark" TEXT NOT NULL,
   "dvctsk_addinrecsystem" BOOLEAN,
+  "equipment_characteristic" INTEGER,
   "device_tasks_type" INTEGER NOT NULL,
   "workspace" INTEGER NOT NULL,
-  "operator" INTEGER NOT NULL,
-  "device" INTEGER NOT NULL,
+  "operator" INTEGER,
+  "device" INTEGER,
   "priorities" INTEGER NOT NULL
 );
 
 CREATE INDEX "idx_device_task__device" ON "device_task" ("device");
 
 CREATE INDEX "idx_device_task__device_tasks_type" ON "device_task" ("device_tasks_type");
+
+CREATE INDEX "idx_device_task__equipment_characteristic" ON "device_task" ("equipment_characteristic");
 
 CREATE INDEX "idx_device_task__operator" ON "device_task" ("operator");
 
@@ -152,6 +155,8 @@ CREATE INDEX "idx_device_task__workspace" ON "device_task" ("workspace");
 ALTER TABLE "device_task" ADD CONSTRAINT "fk_device_task__device" FOREIGN KEY ("device") REFERENCES "device" ("dvc_id") ON DELETE CASCADE;
 
 ALTER TABLE "device_task" ADD CONSTRAINT "fk_device_task__device_tasks_type" FOREIGN KEY ("device_tasks_type") REFERENCES "device_tasks_type" ("dvctsktp_id") ON DELETE CASCADE;
+
+ALTER TABLE "device_task" ADD CONSTRAINT "fk_device_task__equipment_characteristic" FOREIGN KEY ("equipment_characteristic") REFERENCES "eqpmnt_characteristics" ("eqpchrscs_id") ON DELETE SET NULL;
 
 ALTER TABLE "device_task" ADD CONSTRAINT "fk_device_task__operator" FOREIGN KEY ("operator") REFERENCES "operator" ("oprt_id") ON DELETE CASCADE;
 
@@ -195,4 +200,73 @@ ALTER TABLE "user_task" ADD CONSTRAINT "fk_user_task__device_task" FOREIGN KEY (
 
 ALTER TABLE "user_task" ADD CONSTRAINT "fk_user_task__operator" FOREIGN KEY ("operator") REFERENCES "operator" ("oprt_id") ON DELETE CASCADE;
 
-ALTER TABLE "user_task" ADD CONSTRAINT "fk_user_task__workspace" FOREIGN KEY ("workspace") REFERENCES "workspace" ("wrkspc_id") ON DELETE CASCADE
+ALTER TABLE "user_task" ADD CONSTRAINT "fk_user_task__workspace" FOREIGN KEY ("workspace") REFERENCES "workspace" ("wrkspc_id") ON DELETE CASCADE;
+
+CREATE TABLE "planning_criteria" (
+  "plncrt_id" SERIAL PRIMARY KEY,
+  "plncrt_code" TEXT NOT NULL UNIQUE,
+  "plncrt_name" TEXT NOT NULL
+);
+
+CREATE TABLE "planning_weights" (
+  "plnwgt_id" SERIAL PRIMARY KEY,
+  "workspace" INTEGER NOT NULL,
+  "criterion_code" TEXT NOT NULL,
+  "plnwgt_weight" DOUBLE PRECISION NOT NULL DEFAULT 1,
+  UNIQUE ("workspace", "criterion_code")
+);
+
+CREATE INDEX "idx_planning_weights__workspace" ON "planning_weights" ("workspace");
+
+ALTER TABLE "planning_weights" ADD CONSTRAINT "fk_planning_weights__workspace" FOREIGN KEY ("workspace") REFERENCES "workspace" ("wrkspc_id") ON DELETE CASCADE;
+
+CREATE TABLE "device_characteristic_score" (
+  "dvcchrsc_id" SERIAL PRIMARY KEY,
+  "workspace" INTEGER NOT NULL,
+  "device" INTEGER NOT NULL,
+  "equipment_characteristic" INTEGER NOT NULL,
+  "dvcchrsc_score" DOUBLE PRECISION NOT NULL DEFAULT 0,
+  UNIQUE ("workspace", "device", "equipment_characteristic")
+);
+
+CREATE INDEX "idx_device_characteristic_score__workspace" ON "device_characteristic_score" ("workspace");
+CREATE INDEX "idx_device_characteristic_score__device" ON "device_characteristic_score" ("device");
+CREATE INDEX "idx_device_characteristic_score__characteristic" ON "device_characteristic_score" ("equipment_characteristic");
+
+ALTER TABLE "device_characteristic_score" ADD CONSTRAINT "fk_device_characteristic_score__workspace" FOREIGN KEY ("workspace") REFERENCES "workspace" ("wrkspc_id") ON DELETE CASCADE;
+ALTER TABLE "device_characteristic_score" ADD CONSTRAINT "fk_device_characteristic_score__device" FOREIGN KEY ("device") REFERENCES "device" ("dvc_id") ON DELETE CASCADE;
+ALTER TABLE "device_characteristic_score" ADD CONSTRAINT "fk_device_characteristic_score__characteristic" FOREIGN KEY ("equipment_characteristic") REFERENCES "eqpmnt_characteristics" ("eqpchrscs_id") ON DELETE CASCADE;
+
+CREATE TABLE "planning_run" (
+  "plnrun_id" SERIAL PRIMARY KEY,
+  "workspace" INTEGER NOT NULL,
+  "plnrun_started_at" TIMESTAMP NOT NULL DEFAULT now(),
+  "plnrun_status" TEXT NOT NULL DEFAULT 'completed'
+);
+
+CREATE INDEX "idx_planning_run__workspace" ON "planning_run" ("workspace");
+
+ALTER TABLE "planning_run" ADD CONSTRAINT "fk_planning_run__workspace" FOREIGN KEY ("workspace") REFERENCES "workspace" ("wrkspc_id") ON DELETE CASCADE;
+
+CREATE TABLE "planning_recommendation" (
+  "plnrec_id" SERIAL PRIMARY KEY,
+  "planning_run" INTEGER NOT NULL,
+  "device_task" INTEGER NOT NULL,
+  "device" INTEGER,
+  "operator" INTEGER,
+  "plnrec_start" TIMESTAMP,
+  "plnrec_end" TIMESTAMP,
+  "plnrec_score" DOUBLE PRECISION NOT NULL DEFAULT 0,
+  "plnrec_selected" BOOLEAN NOT NULL DEFAULT FALSE,
+  "plnrec_warning_code" TEXT NOT NULL DEFAULT '',
+  "plnrec_warning_text" TEXT NOT NULL DEFAULT '',
+  "plnrec_explanation" TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX "idx_planning_recommendation__run" ON "planning_recommendation" ("planning_run");
+CREATE INDEX "idx_planning_recommendation__task" ON "planning_recommendation" ("device_task");
+
+ALTER TABLE "planning_recommendation" ADD CONSTRAINT "fk_planning_recommendation__run" FOREIGN KEY ("planning_run") REFERENCES "planning_run" ("plnrun_id") ON DELETE CASCADE;
+ALTER TABLE "planning_recommendation" ADD CONSTRAINT "fk_planning_recommendation__task" FOREIGN KEY ("device_task") REFERENCES "device_task" ("dvctsk_id") ON DELETE CASCADE;
+ALTER TABLE "planning_recommendation" ADD CONSTRAINT "fk_planning_recommendation__device" FOREIGN KEY ("device") REFERENCES "device" ("dvc_id") ON DELETE SET NULL;
+ALTER TABLE "planning_recommendation" ADD CONSTRAINT "fk_planning_recommendation__operator" FOREIGN KEY ("operator") REFERENCES "operator" ("oprt_id") ON DELETE SET NULL;

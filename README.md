@@ -323,3 +323,23 @@ docker build -t recsys-backend .
 cd ..
 docker compose up --build
 ```
+## Score-based planning
+
+The planner supports an explainable score-based recommendation flow:
+
+- tasks may be created as an intent before a final device/operator is selected;
+- `equipment_characteristic_id` describes the required characteristic, such as multicolor printing, material, ventilation, or another workspace-specific requirement;
+- on recompute the service rebuilds the unfinished task queue, keeps already running/completed tasks fixed, and may move future tasks only when their own deadlines remain valid;
+- if the new task cannot fit before its deadline without breaking other deadlines, the nearest realistic slot is selected and the response includes a `deadline_missed` warning;
+- device choice can be tuned through `device_characteristic_score`;
+- criterion weights can be tuned through `planning_weights`.
+
+Planning endpoints:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/planning-criteria` | List supported scoring criteria |
+| `GET` | `/api/workspaces/{id}/planning-weights` | List workspace criterion weights |
+| `POST` | `/api/workspaces/{id}/planning-weights` | Upsert a criterion weight |
+| `GET` | `/api/workspaces/{id}/device-characteristic-scores` | List device-characteristic scores |
+| `POST` | `/api/workspaces/{id}/device-characteristic-scores` | Upsert device-characteristic score |

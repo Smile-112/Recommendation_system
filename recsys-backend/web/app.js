@@ -62,6 +62,7 @@ const scheduleForm = document.getElementById('schedule-form');
 
 const taskOperatorSelect = document.getElementById('task-operator');
 const taskTypeSelect = document.getElementById('task-type');
+const taskCharacteristicSelect = document.getElementById('task-characteristic');
 const taskPrioritySelect = document.getElementById('task-priority');
 const taskDeviceSelect = document.getElementById('task-device');
 const deviceTypeSelect = document.getElementById('device-type');
@@ -1147,6 +1148,12 @@ function populateSelect(select, items, formatter, placeholder = 'Выберит�
 function renderSelects() {
   populateSelect(taskOperatorSelect, state.operators, (o) => `${o.full_name} (#${o.id})`);
   populateSelect(taskTypeSelect, state.taskTypes, (t) => `${t.name} (#${t.id})`);
+  populateSelect(
+    taskCharacteristicSelect,
+    state.equipmentCharacteristics,
+    (c) => `${c.name} (#${c.id})`,
+    'Любое подходящее оборудование'
+  );
   populateSelect(taskPrioritySelect, state.priorities, (p) => `${p.name} (#${p.id})`);
   populateSelect(taskDeviceSelect, state.devices, (d) => `${d.name} (#${d.id})`);
   populateSelect(deviceTypeSelect, state.deviceTypes, (t) => `${t.name} (#${t.id})`);
@@ -1382,6 +1389,7 @@ function fillTaskForm(task) {
   taskForm.elements.deadline.value = task.deadline ? toLocalDateTimeValue(new Date(task.deadline)) : '';
   taskForm.elements.operator_id.value = task.operator_id || '';
   taskForm.elements.device_task_type_id.value = task.device_task_type_id || '';
+  taskForm.elements.equipment_characteristic_id.value = task.equipment_characteristic_id || '';
   taskForm.elements.priority_id.value = task.priority_id || '';
   taskForm.elements.device_id.value = task.device_id || '';
   taskForm.elements.duration_min.value = task.duration_min ?? '';
@@ -1656,6 +1664,7 @@ async function createTask(event) {
   payload.device_id = Number(payload.device_id || 0);
   payload.priority_id = Number(payload.priority_id || 0);
   payload.device_task_type_id = Number(payload.device_task_type_id || 0);
+  payload.equipment_characteristic_id = Number(payload.equipment_characteristic_id || 0);
   payload.need_operator = formData.get('need_operator') === 'on';
   payload.add_in_rec_system = formData.get('add_in_rec_system') === 'on';
   payload.deadline = parseDateTimeInput(payload.deadline);
@@ -1889,11 +1898,18 @@ async function handleAdminAction(event) {
 async function recomputePlan() {
   const workspaceId = getWorkspaceId();
   if (!workspaceId) return;
-  await fetchJSON(`${apiBase}/plans/recompute`, {
+  const result = await fetchJSON(`${apiBase}/plans/recompute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ workspace_id: workspaceId })
   });
+  if (result?.warnings?.length) {
+    result.warnings.slice(0, 3).forEach((warning) => {
+      showToast(warning.message || `Задача #${warning.task_id}: предупреждение планирования`, 'warning');
+    });
+  } else {
+    showToast(`План пересчитан. Обновлено задач: ${result?.updated ?? 0}.`, 'success');
+  }
   pendingOverlapCheck = true;
   await loadWorkspaceData();
 }

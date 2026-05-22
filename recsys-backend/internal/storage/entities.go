@@ -81,24 +81,68 @@ type DeviceTaskType struct {
 }
 
 type DeviceTask struct {
-	ID               int64         `json:"id"`
-	Name             string        `json:"name"`
-	Deadline         *time.Time    `json:"deadline"`
-	Duration         time.Duration `json:"duration"`
-	SetupTime        time.Duration `json:"setup_time"`
-	UnloadTime       time.Duration `json:"unload_time"`
-	NeedOperator     bool          `json:"need_operator"`
-	PhotoURL         string        `json:"photo_url"`
-	PlanStart        *time.Time    `json:"plan_start"`
-	PlanEnd          *time.Time    `json:"plan_end"`
-	DocNum           string        `json:"doc_num"`
-	CompletionMark   string        `json:"completion_mark"`
-	AddInRecSystem   *bool         `json:"add_in_rec_system"`
-	DeviceTaskTypeID int64         `json:"device_task_type_id"`
-	WorkspaceID      int64         `json:"workspace_id"`
-	OperatorID       int64         `json:"operator_id"`
-	DeviceID         int64         `json:"device_id"`
-	PriorityID       int64         `json:"priority_id"`
+	ID                        int64         `json:"id"`
+	Name                      string        `json:"name"`
+	Deadline                  *time.Time    `json:"deadline"`
+	Duration                  time.Duration `json:"duration"`
+	SetupTime                 time.Duration `json:"setup_time"`
+	UnloadTime                time.Duration `json:"unload_time"`
+	NeedOperator              bool          `json:"need_operator"`
+	PhotoURL                  string        `json:"photo_url"`
+	PlanStart                 *time.Time    `json:"plan_start"`
+	PlanEnd                   *time.Time    `json:"plan_end"`
+	DocNum                    string        `json:"doc_num"`
+	CompletionMark            string        `json:"completion_mark"`
+	AddInRecSystem            *bool         `json:"add_in_rec_system"`
+	EquipmentCharacteristicID int64         `json:"equipment_characteristic_id"`
+	DeviceTaskTypeID          int64         `json:"device_task_type_id"`
+	WorkspaceID               int64         `json:"workspace_id"`
+	OperatorID                int64         `json:"operator_id"`
+	DeviceID                  int64         `json:"device_id"`
+	PriorityID                int64         `json:"priority_id"`
+}
+
+type PlanningCriterion struct {
+	ID   int64  `json:"id"`
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
+type PlanningWeight struct {
+	ID            int64   `json:"id"`
+	WorkspaceID   int64   `json:"workspace_id"`
+	CriterionCode string  `json:"criterion_code"`
+	Weight        float64 `json:"weight"`
+}
+
+type DeviceCharacteristicScore struct {
+	ID                        int64   `json:"id"`
+	WorkspaceID               int64   `json:"workspace_id"`
+	DeviceID                  int64   `json:"device_id"`
+	EquipmentCharacteristicID int64   `json:"equipment_characteristic_id"`
+	Score                     float64 `json:"score"`
+}
+
+type PlanningRun struct {
+	ID          int64     `json:"id"`
+	WorkspaceID int64     `json:"workspace_id"`
+	StartedAt   time.Time `json:"started_at"`
+	Status      string    `json:"status"`
+}
+
+type PlanningRecommendation struct {
+	ID          int64      `json:"id"`
+	RunID       int64      `json:"run_id"`
+	TaskID      int64      `json:"task_id"`
+	DeviceID    int64      `json:"device_id"`
+	OperatorID  int64      `json:"operator_id"`
+	Start       *time.Time `json:"plan_start"`
+	End         *time.Time `json:"plan_end"`
+	Score       float64    `json:"score"`
+	Selected    bool       `json:"selected"`
+	WarningCode string     `json:"warning_code"`
+	WarningText string     `json:"warning_text"`
+	Explanation string     `json:"explanation"`
 }
 
 type UserTask struct {
@@ -742,7 +786,8 @@ func (r *Repos) GetDeviceTask(ctx context.Context, id int64) (DeviceTask, error)
 		SELECT dvctsk_id, dvctsk_name, dvctsk_deadline, dvctsk_duration, dvctsk_setuptime,
 			dvctsk_timetocomplite, COALESCE(dvctsk_needoperator,false), dvctsk_photourl,
 			dvctsk_planestarttime, dvctsk_planecomptime, dvctsk_docnum, dvctsk_complitionmark,
-			dvctsk_addinrecsystem, device_tasks_type, workspace, operator, device, priorities
+			dvctsk_addinrecsystem, COALESCE(equipment_characteristic, 0), device_tasks_type,
+			workspace, COALESCE(operator, 0), COALESCE(device, 0), priorities
 		FROM device_task
 		WHERE dvctsk_id = $1
 	`, id).Scan(
@@ -759,6 +804,7 @@ func (r *Repos) GetDeviceTask(ctx context.Context, id int64) (DeviceTask, error)
 		&t.DocNum,
 		&t.CompletionMark,
 		&t.AddInRecSystem,
+		&t.EquipmentCharacteristicID,
 		&t.DeviceTaskTypeID,
 		&t.WorkspaceID,
 		&t.OperatorID,
@@ -790,12 +836,13 @@ func (r *Repos) CreateDeviceTask(ctx context.Context, t DeviceTask) (int64, erro
 			dvctsk_timetocomplite,
 			dvctsk_complitionmark,
 			dvctsk_addinrecsystem,
+			equipment_characteristic,
 			device_tasks_type,
 			workspace,
 			operator,
 			device,
 			priorities
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
 		RETURNING dvctsk_id
 	`,
 		t.Name,
@@ -810,10 +857,11 @@ func (r *Repos) CreateDeviceTask(ctx context.Context, t DeviceTask) (int64, erro
 		formatDuration(t.UnloadTime),
 		t.CompletionMark,
 		t.AddInRecSystem,
+		nullInt64(t.EquipmentCharacteristicID),
 		t.DeviceTaskTypeID,
 		t.WorkspaceID,
-		t.OperatorID,
-		t.DeviceID,
+		nullInt64(t.OperatorID),
+		nullInt64(t.DeviceID),
 		t.PriorityID,
 	).Scan(&id)
 	return id, err
@@ -834,11 +882,12 @@ func (r *Repos) UpdateDeviceTask(ctx context.Context, t DeviceTask) error {
 			dvctsk_timetocomplite = $11,
 			dvctsk_complitionmark = $12,
 			dvctsk_addinrecsystem = $13,
-			device_tasks_type = $14,
-			workspace = $15,
-			operator = $16,
-			device = $17,
-			priorities = $18
+			equipment_characteristic = $14,
+			device_tasks_type = $15,
+			workspace = $16,
+			operator = $17,
+			device = $18,
+			priorities = $19
 		WHERE dvctsk_id = $1
 	`,
 		t.ID,
@@ -854,10 +903,11 @@ func (r *Repos) UpdateDeviceTask(ctx context.Context, t DeviceTask) error {
 		formatDuration(t.UnloadTime),
 		t.CompletionMark,
 		t.AddInRecSystem,
+		nullInt64(t.EquipmentCharacteristicID),
 		t.DeviceTaskTypeID,
 		t.WorkspaceID,
-		t.OperatorID,
-		t.DeviceID,
+		nullInt64(t.OperatorID),
+		nullInt64(t.DeviceID),
 		t.PriorityID,
 	)
 	return err

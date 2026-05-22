@@ -390,11 +390,15 @@
         </label>
         <label>
           Оператор
-          <select name="operator_id" id="task-operator" required></select>
+          <select name="operator_id" id="task-operator"></select>
         </label>
         <label>
           Тип задания
           <select name="device_task_type_id" id="task-type" required></select>
+        </label>
+        <label>
+          Требование к оборудованию
+          <select name="equipment_characteristic_id" id="task-characteristic"></select>
         </label>
         <span class="helper-text">Оператор, тип задания и оборудование связаны через таблицы БД.</span>
         <label>
@@ -403,7 +407,7 @@
         </label>
         <label>
           Оборудование
-          <select name="device_id" id="task-device" required></select>
+          <select name="device_id" id="task-device"></select>
         </label>
         <label>
           Время выполнения, мин

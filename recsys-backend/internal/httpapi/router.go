@@ -80,8 +80,14 @@ func NewRouter(h *Handlers) http.Handler {
 				ws.Post("/device-types", h.CreateDeviceType)
 				ws.Get("/equipment-characteristics", h.ListEquipmentCharacteristics)
 				ws.Post("/equipment-characteristics", h.CreateEquipmentCharacteristic)
+				ws.Get("/planning-weights", h.ListPlanningWeights)
+				ws.Post("/planning-weights", h.UpsertPlanningWeight)
+				ws.Get("/device-characteristic-scores", h.ListDeviceCharacteristicScores)
+				ws.Post("/device-characteristic-scores", h.UpsertDeviceCharacteristicScore)
 			})
 		})
+
+		api.Get("/planning-criteria", h.ListPlanningCriteria)
 
 		api.Route("/device-states", func(r chi.Router) {
 			r.Get("/", h.ListDeviceStates)
