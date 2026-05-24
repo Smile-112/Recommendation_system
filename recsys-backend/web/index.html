@@ -7,39 +7,27 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <header class="app-header">
-    <div class="app-header__row">
-      <div class="brand">
+  <div class="app-shell">
+    <aside class="app-sidebar">
+      <div class="brand brand--sidebar">
         <div class="brand__icon"><img src="assets/logo.svg" alt=""></div>
         <div>
           <h1>Halomeny</h1>
           <p>Система рекомендаций загрузки производственного оборудования</p>
         </div>
       </div>
-      <div class="header-status">
-        <span id="api-status" class="pill">API: неизвестно</span>
-        <div class="dev-tools" id="dev-tools">
-          <button class="icon-button icon-button--outline" id="seed-db" type="button" title="Добавить тестовые данные">
-            +
-          </button>
-          <button
-            class="icon-button icon-button--outline icon-button--danger"
-            id="clear-db"
-            type="button"
-            title="Очистить базу данных"
-          >
-            −
-          </button>
-        </div>
-        <div class="user-bar">
-          <span id="user-greeting" class="muted">Гость</span>
-          <button class="button button--ghost" id="auth-action" type="button">Войти</button>
+
+      <div class="workspace-bar workspace-panel">
+        <label for="workspace-select">Рабочее пространство</label>
+        <div class="workspace-bar__controls">
+          <select id="workspace-select"></select>
+          <button class="icon-button icon-button--outline" id="refresh-workspaces" type="button" title="Обновить">↻</button>
+          <button class="icon-button icon-button--outline" id="open-workspace-modal" type="button" title="Создать">+</button>
         </div>
       </div>
-    </div>
-    <div class="app-header__row app-header__row--nav">
-      <nav class="nav">
-        <button class="nav__link is-active" data-page="home">Главная</button>
+
+      <nav class="nav nav--sidebar">
+        <button class="nav__link is-active" data-page="plan">План производства</button>
         <button class="nav__link" data-page="tasks">Задания</button>
         <button class="nav__link" data-page="equipment">Оборудование</button>
         <button class="nav__link" data-page="operators">Операторы</button>
@@ -47,80 +35,80 @@
         <button class="nav__link" data-page="references">Справочники</button>
         <button class="nav__link" data-page="about">О нас</button>
       </nav>
-      <div class="workspace-bar">
-        <label for="workspace-select">Рабочее пространство</label>
-        <div class="workspace-bar__controls">
-          <select id="workspace-select"></select>
-          <button class="button button--ghost" id="refresh-workspaces">Обновить</button>
-          <button class="button" id="open-workspace-modal">Создать</button>
+
+      <div class="sidebar-status">
+        <span id="api-status" class="pill">API: неизвестно</span>
+        <div class="user-bar">
+          <span id="user-greeting" class="muted">Гость</span>
+          <button class="button button--ghost" id="auth-action" type="button">Войти</button>
+        </div>
+        <div class="dev-tools" id="dev-tools">
+          <button class="icon-button icon-button--outline" id="seed-db" type="button" title="Добавить тестовые данные">+</button>
+          <button class="icon-button icon-button--outline icon-button--danger" id="clear-db" type="button" title="Очистить базу данных">−</button>
         </div>
       </div>
-    </div>
-  </header>
+    </aside>
 
-  <main>
-    <section class="page is-active" data-page="home">
-      <div class="layout-grid">
-        <div class="card">
-          <div class="card__header">
-            <h2>Статистика на сегодня</h2>
-            <button class="button button--ghost" id="recompute-plan">Пересчитать план</button>
-          </div>
-          <div class="stats" id="home-stats"></div>
-          <div class="muted">
-            <p><strong>Как работает «Пересчитать план»:</strong></p>
-            <ul>
-              <li>Берёт задачи без расписания и сортирует по дедлайну, затем по приоритету.</li>
-              <li>Учитывает занятость принтеров и операторов, а также рабочие часы (09:00–22:00).</li>
-              <li>Для каждой задачи ищет ближайший свободный слот с учётом длительности, настройки и снятия.</li>
-            </ul>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card__header">
-            <h2>Ближайшие задачи</h2>
-          </div>
-          <div class="table" id="upcoming-tasks"></div>
-        </div>
-        <div class="card">
-          <div class="card__header">
-            <h2>Сущности рабочего пространства</h2>
-          </div>
-          <p class="card__subtitle">
-            Быстрый обзор ключевых таблиц: оборудование, операторы, задания и справочники.
-          </p>
-          <div class="entity-summary" id="entity-summary"></div>
-        </div>
-      </div>
+    <div class="app-workspace">
+      <main class="app-main">
+    <section class="page is-active" data-page="plan">
+      <section class="plan-cockpit">
+        <div class="plan-cockpit__main">
+          <div class="metric-grid" id="plan-metrics"></div>
 
-      <section class="card">
-        <div class="card__header">
-          <h2>Задания в течение дня</h2>
-          <div class="toolbar">
-            <span class="muted" id="home-date"></span>
-          </div>
+          <section class="panel panel--timeline">
+            <div class="panel__header">
+              <div>
+                <h2>План на сегодня</h2>
+                <p class="panel__subtitle" id="home-date"></p>
+              </div>
+              <div class="toolbar">
+                <button class="button button--ghost" id="refresh-devices" type="button">Обновить</button>
+                <button class="button" id="recompute-plan" type="button">Пересчитать план</button>
+              </div>
+            </div>
+            <div class="gantt gantt--production" id="home-gantt"></div>
+            <div class="legend legend--interactive" id="home-gantt-legend">
+              <div class="legend__item" data-status="done">
+                <span class="legend__swatch done"></span>Завершено
+              </div>
+              <div class="legend__item" data-status="progress">
+                <span class="legend__swatch progress"></span>В работе
+              </div>
+              <div class="legend__item" data-status="pending">
+                <span class="legend__swatch pending"></span>Ожидает
+              </div>
+              <div class="legend__item" data-status="warning">
+                <span class="legend__swatch warning"></span>Риск срока
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel__header">
+              <h2>Ближайшие задачи</h2>
+            </div>
+            <div class="table" id="upcoming-tasks"></div>
+          </section>
         </div>
-        <div class="gantt" id="home-gantt"></div>
-        <div class="legend legend--interactive" id="home-gantt-legend">
-          <div class="legend__item" data-status="done">
-            <span class="legend__swatch done"></span>Задание выполнено
-          </div>
-          <div class="legend__item" data-status="progress">
-            <span class="legend__swatch progress"></span>Выполняется
-          </div>
-          <div class="legend__item" data-status="pending">
-            <span class="legend__swatch pending"></span>Ожидает запуск
-          </div>
-        </div>
+
+        <aside class="plan-cockpit__side">
+          <section class="panel">
+            <div class="panel__header"><h2>Рекомендации</h2></div>
+            <div class="recommendation-list" id="planner-recommendation-panel"></div>
+          </section>
+          <section class="panel">
+            <div class="panel__header"><h2>Предупреждения</h2></div>
+            <div class="warning-list" id="planner-warning-panel"></div>
+          </section>
+          <section class="panel">
+            <div class="panel__header"><h2>Рабочее пространство</h2></div>
+            <div class="entity-summary" id="entity-summary"></div>
+          </section>
+        </aside>
       </section>
-
-      <section class="card">
-        <div class="card__header">
-          <h2>Загруженность оборудования</h2>
-          <button class="button button--ghost" id="refresh-devices">Обновить</button>
-        </div>
-        <div class="device-grid" id="equipment-cards"></div>
-      </section>
+      <div class="stats is-hidden" id="home-stats"></div>
+      <div class="device-grid is-hidden" id="equipment-cards"></div>
     </section>
 
     <section class="page" data-page="tasks">
@@ -264,6 +252,18 @@
           </ul>
           <p class="muted">Эти связи повторяют структуру БД и помогают быстрее находить нужные сущности.</p>
         </div>
+        <div class="card">
+          <div class="card__header">
+            <h2>Веса критериев планировщика</h2>
+          </div>
+          <div class="table table--wide" id="planning-weights-list"></div>
+        </div>
+        <div class="card">
+          <div class="card__header">
+            <h2>Оценки оборудования по характеристикам</h2>
+          </div>
+          <div class="table table--wide" id="device-characteristic-scores-list"></div>
+        </div>
       </div>
     </section>
 
@@ -341,7 +341,9 @@
         <div class="table table--wide" id="users-list"></div>
       </div>
     </section>
-  </main>
+      </main>
+    </div>
+  </div>
 
   <dialog class="modal" id="workspace-modal">
     <form method="dialog" class="modal__content" id="workspace-form">
@@ -370,67 +372,73 @@
         <h3 id="task-modal-title">Новое задание</h3>
         <button class="icon-button" type="button" data-close>✕</button>
       </div>
-      <div class="modal__grid">
-        <label>
-          Название задания
-          <input name="name" type="text" required />
-        </label>
-        <label>
-          Номер документа
-          <input name="doc_num" type="text" placeholder="DOC-000" pattern="DOC-\d{1,6}" required />
-        </label>
-        <span class="helper-text">Документы связывают задания с планами производства.</span>
-        <label>
-          Фото модели (URL) <span class="muted" style="font-weight:400;font-size:12px;">— необязательно</span>
-          <input name="photo_url" type="url" placeholder="https://…" />
-        </label>
-        <label>
-          Срок реализации
-          <input name="deadline" type="datetime-local" />
-        </label>
-        <label>
-          Оператор
-          <select name="operator_id" id="task-operator"></select>
-        </label>
-        <label>
-          Тип задания
-          <select name="device_task_type_id" id="task-type" required></select>
-        </label>
-        <label>
-          Требование к оборудованию
-          <select name="equipment_characteristic_id" id="task-characteristic"></select>
-        </label>
-        <span class="helper-text">Оператор, тип задания и оборудование связаны через таблицы БД.</span>
-        <label>
-          Приоритет
-          <select name="priority_id" id="task-priority" required></select>
-        </label>
-        <label>
-          Оборудование
-          <select name="device_id" id="task-device"></select>
-        </label>
-        <label>
-          Время выполнения, мин
-          <input name="duration_min" type="number" min="0" step="1" required />
-        </label>
-        <label>
-          Время на настройку, мин
-          <input name="setup_time_min" type="number" min="0" step="1" required />
-        </label>
-        <label>
-          Время на снятие изделия, мин
-          <input name="unload_time_min" type="number" min="0" step="1" required />
-        </label>
-        <span class="helper-text">Временные параметры используются при расчёте расписания.</span>
-        <label>
-          Плановое время начала
-          <input name="plan_start" type="datetime-local" />
-        </label>
-        <label>
-          Плановое время завершения
-          <input name="plan_end" type="datetime-local" />
-        </label>
-      </div>
+      <fieldset class="form-section">
+        <legend>Производственный запрос</legend>
+        <div class="modal__grid">
+          <label>
+            Название задания
+            <input name="name" type="text" required />
+          </label>
+          <label>
+            Номер документа
+            <input name="doc_num" type="text" placeholder="DOC-000" pattern="DOC-\d{1,6}" required />
+          </label>
+          <label>
+            Срок реализации
+            <input name="deadline" type="datetime-local" />
+          </label>
+          <label>
+            Тип задания
+            <select name="device_task_type_id" id="task-type" required></select>
+          </label>
+          <label>
+            Требование к оборудованию
+            <select name="equipment_characteristic_id" id="task-characteristic"></select>
+          </label>
+          <label>
+            Приоритет
+            <select name="priority_id" id="task-priority" required></select>
+          </label>
+          <label>
+            Время выполнения, мин
+            <input name="duration_min" type="number" min="0" step="1" required />
+          </label>
+          <label>
+            Время на настройку, мин
+            <input name="setup_time_min" type="number" min="0" step="1" required />
+          </label>
+          <label>
+            Время на снятие изделия, мин
+            <input name="unload_time_min" type="number" min="0" step="1" required />
+          </label>
+          <label>
+            Фото модели (URL) <span class="muted" style="font-weight:400;font-size:12px;">— необязательно</span>
+            <input name="photo_url" type="url" placeholder="https://…" />
+          </label>
+        </div>
+      </fieldset>
+      <fieldset class="form-section form-section--secondary">
+        <legend>Назначение планировщика</legend>
+        <p class="field-hint">Оставьте оборудование и оператора пустыми, чтобы алгоритм выбрал ресурс автоматически.</p>
+        <div class="modal__grid">
+          <label>
+            Оператор
+            <select name="operator_id" id="task-operator"></select>
+          </label>
+          <label>
+            Оборудование
+            <select name="device_id" id="task-device"></select>
+          </label>
+          <label>
+            Плановое время начала
+            <input name="plan_start" type="datetime-local" />
+          </label>
+          <label>
+            Плановое время завершения
+            <input name="plan_end" type="datetime-local" />
+          </label>
+        </div>
+      </fieldset>
       <div class="checkbox-group">
         <label class="checkbox">
           <input type="checkbox" name="need_operator" />

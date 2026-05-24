@@ -17,6 +17,9 @@ const openScheduleModalBtn = document.getElementById('open-schedule-modal');
 const tasksDateInput = document.getElementById('tasks-date');
 const tasksSortSelect = document.getElementById('tasks-sort');
 const homeStats = document.getElementById('home-stats');
+const planMetrics = document.getElementById('plan-metrics');
+const plannerRecommendationPanel = document.getElementById('planner-recommendation-panel');
+const plannerWarningPanel = document.getElementById('planner-warning-panel');
 const upcomingTasks = document.getElementById('upcoming-tasks');
 const entitySummary = document.getElementById('entity-summary');
 const homeGantt = document.getElementById('home-gantt');
@@ -42,6 +45,8 @@ const equipmentCharacteristicsList = document.getElementById('equipment-characte
 const deviceTypesList = document.getElementById('device-types-list');
 const taskTypesList = document.getElementById('task-types-list');
 const equipmentCharacteristicSelect = document.getElementById('equipment-characteristic-select');
+const planningWeightsList = document.getElementById('planning-weights-list');
+const deviceCharacteristicScoresList = document.getElementById('device-characteristic-scores-list');
 const toastContainer = document.getElementById('toast-container');
 
 const workspaceModal = document.getElementById('workspace-modal');
@@ -86,6 +91,10 @@ const state = {
   operatorDevices: [],
   operatorCompetencies: [],
   userTasks: [],
+  planningCriteria: [],
+  planningWeights: [],
+  deviceCharacteristicScores: [],
+  lastPlannerResult: null,
   currentUser: null
 };
 
@@ -220,6 +229,15 @@ function mapById(items) {
     acc[item.id] = item;
     return acc;
   }, {});
+}
+
+function escapeHTML(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function showToast(message, variant = 'info') {
@@ -362,7 +380,10 @@ async function loadWorkspaceData() {
     taskTypes,
     operatorDevices,
     operatorCompetencies,
-    userTasks
+    userTasks,
+    planningCriteria,
+    planningWeights,
+    deviceCharacteristicScores
   ] = await Promise.all([
     fetchJSON(`${apiBase}/workspaces/${workspaceId}/devices`),
     fetchJSON(`${apiBase}/workspaces/${workspaceId}/operators`),
@@ -372,7 +393,10 @@ async function loadWorkspaceData() {
     fetchJSON(`${apiBase}/workspaces/${workspaceId}/device-task-types`),
     fetchJSON(`${apiBase}/workspaces/${workspaceId}/operator-devices`),
     fetchJSON(`${apiBase}/workspaces/${workspaceId}/operator-competencies`),
-    fetchJSON(`${apiBase}/workspaces/${workspaceId}/user-tasks`)
+    fetchJSON(`${apiBase}/workspaces/${workspaceId}/user-tasks`),
+    fetchJSON(`${apiBase}/planning-criteria`),
+    fetchJSON(`${apiBase}/workspaces/${workspaceId}/planning-weights`),
+    fetchJSON(`${apiBase}/workspaces/${workspaceId}/device-characteristic-scores`)
   ]);
   state.devices = devices;
   state.operators = operators;
@@ -383,6 +407,9 @@ async function loadWorkspaceData() {
   state.operatorDevices = operatorDevices;
   state.operatorCompetencies = operatorCompetencies;
   state.userTasks = userTasks;
+  state.planningCriteria = planningCriteria;
+  state.planningWeights = planningWeights;
+  state.deviceCharacteristicScores = deviceCharacteristicScores;
   renderAll();
   if (pendingOverlapCheck) {
     notifyAllTaskBreakOverlaps();
@@ -409,6 +436,108 @@ function getTaskStatus(task) {
     if (start <= now && now <= end) return 'progress';
   }
   return 'pending';
+}
+
+function getTaskDeadlineTone(task) {
+  if (!task.deadline) return 'neutral';
+  if (task.plan_end && new Date(task.plan_end) > new Date(task.deadline)) return 'danger';
+  const hoursLeft = (new Date(task.deadline) - new Date()) / 36e5;
+  if (hoursLeft <= 4 && hoursLeft >= 0) return 'warning';
+  return 'ok';
+}
+
+function renderTaskBadge(task) {
+  const tone = getTaskDeadlineTone(task);
+  const label =
+    tone === 'danger' ? 'Просрочка' : tone === 'warning' ? 'Скоро дедлайн' : tone === 'ok' ? 'В срок' : 'Без срока';
+  return `<span class="status-badge status-badge--${tone}">${label}</span>`;
+}
+
+function getPlanMetrics() {
+  const scheduledTasks = state.tasks.filter((task) => task.plan_start && task.plan_end);
+  const unscheduledTasks = state.tasks.filter(
+    (task) => task.add_in_rec_system !== false && (!task.plan_start || !task.plan_end)
+  );
+  const deadlineRisks = state.tasks.filter((task) => getTaskDeadlineTone(task) === 'danger');
+  const activeTasks = state.tasks.filter((task) => getTaskStatus(task) === 'progress');
+  const utilization = state.devices.length ? Math.round((activeTasks.length / state.devices.length) * 100) : 0;
+  return [
+    { label: 'В плане', value: scheduledTasks.length },
+    { label: 'Риск срока', value: deadlineRisks.length, tone: deadlineRisks.length ? 'danger' : 'ok' },
+    { label: 'Не назначено', value: unscheduledTasks.length, tone: unscheduledTasks.length ? 'warning' : 'ok' },
+    { label: 'Загрузка', value: `${utilization}%` }
+  ];
+}
+
+function renderPlanMetrics() {
+  if (!planMetrics) return;
+  planMetrics.innerHTML = getPlanMetrics()
+    .map(
+      (metric) => `
+        <article class="metric-card metric-card--${metric.tone || 'neutral'}">
+          <span>${escapeHTML(metric.label)}</span>
+          <strong>${escapeHTML(metric.value)}</strong>
+        </article>
+      `
+    )
+    .join('');
+}
+
+function renderRecommendationItem(item) {
+  const task = state.tasks.find((candidate) => candidate.id === item.task_id);
+  const device = state.devices.find((candidate) => candidate.id === item.device_id);
+  const operator = state.operators.find((candidate) => candidate.id === item.operator_id);
+  return `
+    <article class="recommendation-item">
+      <strong>${escapeHTML(task?.name || `Задача #${item.task_id}`)}</strong>
+      <span>${escapeHTML(device?.name || 'Оборудование не выбрано')}</span>
+      <span>${escapeHTML(operator?.full_name || 'Оператор не выбран')}</span>
+      <small>${formatTime(item.plan_start)}–${formatTime(item.plan_end)} · score ${Number(item.score || 0).toFixed(1)}</small>
+      ${item.warning_text ? `<p class="recommendation-item__warning">${escapeHTML(item.warning_text)}</p>` : ''}
+      ${item.explanation ? `<p>${escapeHTML(item.explanation)}</p>` : ''}
+    </article>
+  `;
+}
+
+function renderPlannerPanels() {
+  if (plannerRecommendationPanel) {
+    const recommendations = state.lastPlannerResult?.recommendations || [];
+    plannerRecommendationPanel.innerHTML = recommendations.length
+      ? recommendations.slice(0, 5).map(renderRecommendationItem).join('')
+      : '<div class="empty-state">Пересчитайте план, чтобы увидеть рекомендации.</div>';
+  }
+  if (plannerWarningPanel) {
+    const warnings = state.lastPlannerResult?.warnings || [];
+    plannerWarningPanel.innerHTML = warnings.length
+      ? warnings
+          .map(
+            (warning) =>
+              `<div class="warning-item"><strong>Задача #${warning.task_id}</strong><span>${escapeHTML(
+                warning.message || warning.code
+              )}</span></div>`
+          )
+          .join('')
+      : '<div class="empty-state empty-state--ok">Критических предупреждений нет.</div>';
+  }
+}
+
+function getOperatorWorkload(operatorId) {
+  const tasks = state.tasks.filter((task) => task.operator_id === operatorId && task.plan_start && task.plan_end);
+  const breaks = state.userTasks.filter((task) => task.operator_id === operatorId);
+  const nextTask = tasks
+    .filter((task) => new Date(task.plan_end) >= new Date())
+    .sort((a, b) => new Date(a.plan_start) - new Date(b.plan_start))[0];
+  return { tasks, breaks, nextTask };
+}
+
+function taskOverlapsOperatorBreak(task) {
+  if (!task.operator_id || !task.plan_start || !task.plan_end) return false;
+  const start = new Date(task.plan_start);
+  const end = new Date(task.plan_end);
+  return state.userTasks.some((entry) => {
+    if (entry.operator_id !== task.operator_id || !entry.start_time || !entry.end_time) return false;
+    return start < new Date(entry.end_time) && end > new Date(entry.start_time);
+  });
 }
 
 function getStatusLabel(status) {
@@ -557,7 +686,7 @@ function buildGantt(container, tasks, labelFormatter) {
       const width = Math.max(4, ((endMinutes - startMinutes) / totalMinutes) * 100);
       const left = (startMinutes / totalMinutes) * 100;
       const bar = document.createElement('div');
-      const status = task._status || getTaskStatus(task);
+      const status = task._status || (getTaskDeadlineTone(task) === 'danger' ? 'warning' : getTaskStatus(task));
       bar.className = `gantt__bar ${status}`;
       bar.style.left = `${left}%`;
       bar.style.width = `${width}%`;
@@ -595,6 +724,7 @@ function buildTaskPayload(task, overrides) {
     device_id: Number(task.device_id || 0),
     priority_id: Number(task.priority_id || 0),
     device_task_type_id: Number(task.device_task_type_id || 0),
+    equipment_characteristic_id: Number(task.equipment_characteristic_id || 0),
     duration_min: Number(task.duration_min || 0),
     setup_time_min: Number(task.setup_time_min || 0),
     unload_time_min: Number(task.unload_time_min || 0),
@@ -873,13 +1003,13 @@ function renderUpcomingTasks() {
       return `
         <div class="table__row clickable" data-task-id="${task.id}">
           <div>
-            <strong>${task.name}</strong><br />
-            <span class="muted">${operator ? operator.full_name : 'Оператор не назначен'} ·
-            ${device ? device.name : 'Оборудование не выбрано'}</span>
-            <div class="muted">Тип: ${taskType ? taskType.name : '—'} · Приоритет: ${
+            <strong>${escapeHTML(task.name)}</strong><br />
+            <span class="muted">${escapeHTML(operator ? operator.full_name : 'Оператор не назначен')} ·
+            ${escapeHTML(device ? device.name : 'Оборудование не выбрано')}</span>
+            <div class="muted">Тип: ${escapeHTML(taskType ? taskType.name : '—')} · Приоритет: ${escapeHTML(
         priority ? priority.name : '—'
-      }</div>
-            <div class="device-card__badges">${priorityBadge}</div>
+      )}</div>
+            <div class="device-card__badges">${renderTaskBadge(task)}${priorityBadge}</div>
           </div>
           <div>${formatTime(task.plan_start)}</div>
           <div>${formatTime(task.plan_end)}</div>
@@ -901,10 +1031,11 @@ function renderHomeGantt() {
     const operator = state.operators.find((item) => item.id === task.operator_id);
     const taskType = state.taskTypes.find((item) => item.id === task.device_task_type_id);
     return `
-      <span class="gantt__label-title">${task.name}</span>
-      <small>${operator ? operator.full_name : 'Оператор не назначен'} · ${
+      <span class="gantt__label-title">${escapeHTML(task.name)}</span>
+      <small>${escapeHTML(operator ? operator.full_name : 'Оператор не назначен')} · ${escapeHTML(
       taskType ? taskType.name : 'Тип не указан'
-    }</small>
+    )}</small>
+      ${renderTaskBadge(task)}
     `;
   });
 }
@@ -926,6 +1057,8 @@ function renderEquipment() {
     const deviceType = deviceTypesById[device.device_type_id];
     const characteristicName =
       characteristicsById[deviceType?.equipment_characteristic_id]?.name || '—';
+    const scores = state.deviceCharacteristicScores.filter((score) => score.device_id === device.id);
+    const bestScore = scores.sort((a, b) => Number(b.score || 0) - Number(a.score || 0))[0];
     const stateLabel = deviceStatesById[device.device_state_id]?.name || 'Состояние неизвестно';
     const stateBadgeClass = stateLabel.toLowerCase().includes('авар')
       ? 'badge--danger'
@@ -937,14 +1070,15 @@ function renderEquipment() {
       : '<span class="badge">Без рекомендаций</span>';
     return `
       <div class="device-card clickable" data-device-id="${device.id}">
-        <img src="${device.photo_url || 'https://placehold.co/400x240?text=3D+Printer'}" alt="${device.name}" />
+        <img src="${device.photo_url || 'https://placehold.co/400x240?text=3D+Printer'}" alt="${escapeHTML(device.name)}" />
         <div>
-          <strong>${device.name}</strong>
-          <div class="muted">${deviceType?.name || 'Тип не указан'}</div>
-          <div class="muted">Характеристика: ${characteristicName}</div>
+          <strong>${escapeHTML(device.name)}</strong>
+          <div class="muted">${escapeHTML(deviceType?.name || 'Тип не указан')}</div>
+          <div class="muted">Характеристика: ${escapeHTML(characteristicName)}</div>
+          <div class="muted">Оценка планировщика: ${bestScore ? Number(bestScore.score || 0).toFixed(0) : 'не задана'}</div>
         </div>
         <div class="device-card__badges">
-          <span class="badge ${stateBadgeClass}">${stateLabel}</span>
+          <span class="badge ${stateBadgeClass}">${escapeHTML(stateLabel)}</span>
           ${recBadge}
         </div>
         <div class="device-card__status">
@@ -954,7 +1088,7 @@ function renderEquipment() {
         <div class="device-card__progress">
           <span style="width: ${progressPercent}%"></span>
         </div>
-        <div class="muted">${activeTask ? `Задача: ${activeTask.name}` : 'Нет активных задач'}</div>
+        <div class="muted">${activeTask ? `Задача: ${escapeHTML(activeTask.name)}` : 'Нет активных задач'}</div>
       </div>
     `;
   };
@@ -987,22 +1121,20 @@ function renderOperators() {
       const responsibilities = state.operatorDevices
         .filter((item) => item.operator_id === operator.id)
         .map((item) => devicesById[item.device_id]?.name || `#${item.device_id}`);
-      const tasks = tasksByOperator[operator.id] || [];
-      const nextTask = tasks
-        .filter((task) => task.plan_start)
-        .sort((a, b) => new Date(a.plan_start) - new Date(b.plan_start))[0];
+      const workload = getOperatorWorkload(operator.id);
+      const nextTask = workload.nextTask;
       const competenciesHtml = competencies.length
-        ? competencies.map((item) => `<span class="chip">${item}</span>`).join('')
+        ? competencies.map((item) => `<span class="chip">${escapeHTML(item)}</span>`).join('')
         : '<span class="chip">Не указаны</span>';
       const responsibilitiesHtml = responsibilities.length
-        ? responsibilities.map((item) => `<span class="chip">${item}</span>`).join('')
+        ? responsibilities.map((item) => `<span class="chip">${escapeHTML(item)}</span>`).join('')
         : '<span class="chip">Не указано</span>';
 
       return `
         <div class="operator-card clickable" data-operator-id="${operator.id}">
           <div class="operator-card__header">
-            <strong>${operator.full_name}</strong>
-            <span class="muted">${operator.phone_number}</span>
+            <strong>${escapeHTML(operator.full_name)}</strong>
+            <span class="muted">${escapeHTML(operator.phone_number)}</span>
           </div>
           <div class="operator-card__meta">
             <div>
@@ -1013,8 +1145,12 @@ function renderOperators() {
               <strong>Отвечает за:</strong>
               <div class="chip-group">${responsibilitiesHtml}</div>
             </div>
-            <div><strong>Ближайшая задача:</strong> ${nextTask ? nextTask.name : 'Нет'}</div>
-            <div><strong>Плановый старт:</strong> ${nextTask ? formatTime(nextTask.plan_start) : '—'}</div>
+          </div>
+          <div class="operator-card__load">
+            <span>${workload.tasks.length} задач в плане</span>
+            <span>${workload.breaks.length} интервалов недоступности</span>
+            <strong>${escapeHTML(nextTask ? nextTask.name : 'Нет ближайшей задачи')}</strong>
+            <span>${nextTask ? `Старт: ${formatTime(nextTask.plan_start)}` : 'Свободен по текущему плану'}</span>
           </div>
         </div>
       `;
@@ -1080,7 +1216,8 @@ function buildOperatorsGantt(container, tasksByOperator) {
       const left = (startMinutes / totalMinutes) * 100;
       const bar = document.createElement('div');
       const status = task._status || getTaskStatus(task);
-      bar.className = `gantt__bar gantt__bar--stacked ${status}`;
+      const conflictClass = !task._userTaskId && taskOverlapsOperatorBreak(task) ? ' gantt__bar--conflict' : '';
+      bar.className = `gantt__bar gantt__bar--stacked ${status}${conflictClass}`;
       bar.style.left = `${left}%`;
       bar.style.width = `${width}%`;
       bar.style.top = `${12 + index * 32}px`;
@@ -1293,10 +1430,61 @@ function renderReferenceTables() {
       .join('');
     taskTypesList.innerHTML = header + rows;
   }
+
+  renderPlanningSettings();
+}
+
+function renderSimpleTable(headers, rows) {
+  if (!rows.length) return '<div class="gantt__empty">Нет данных</div>';
+  const header = `
+    <div class="table__row">
+      ${headers.map((item) => `<strong>${escapeHTML(item)}</strong>`).join('')}
+    </div>
+  `;
+  const body = rows
+    .map(
+      (row) => `
+        <div class="table__row">
+          ${row.map((cell) => `<div>${cell}</div>`).join('')}
+        </div>
+      `
+    )
+    .join('');
+  return header + body;
+}
+
+function renderPlanningSettings() {
+  if (planningWeightsList) {
+    planningWeightsList.innerHTML = renderSimpleTable(
+      ['Критерий', 'Вес', 'Код'],
+      state.planningWeights.map((weight) => {
+        const criterion = state.planningCriteria.find((item) => item.code === weight.criterion_code);
+        return [
+          escapeHTML(criterion?.name || weight.criterion_code),
+          Number(weight.weight || 0).toFixed(2),
+          `<span class="muted">${escapeHTML(weight.criterion_code)}</span>`
+        ];
+      })
+    );
+  }
+  if (deviceCharacteristicScoresList) {
+    const devicesById = mapById(state.devices);
+    const characteristicsById = mapById(state.equipmentCharacteristics);
+    deviceCharacteristicScoresList.innerHTML = renderSimpleTable(
+      ['Оборудование', 'Характеристика', 'Оценка'],
+      state.deviceCharacteristicScores.map((score) => [
+        escapeHTML(devicesById[score.device_id]?.name || `#${score.device_id}`),
+        escapeHTML(characteristicsById[score.equipment_characteristic_id]?.name || `#${score.equipment_characteristic_id}`),
+        Number(score.score || 0).toFixed(0)
+      ])
+    );
+  }
 }
 
 function renderAll() {
   renderSelects();
+  renderPlanMetrics();
+  renderPlannerPanels();
   renderHomeStats();
   renderEntitySummary();
   renderUpcomingTasks();
@@ -1903,6 +2091,7 @@ async function recomputePlan() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ workspace_id: workspaceId })
   });
+  state.lastPlannerResult = result;
   if (result?.warnings?.length) {
     result.warnings.slice(0, 3).forEach((warning) => {
       showToast(warning.message || `Задача #${warning.task_id}: предупреждение планирования`, 'warning');
@@ -1912,6 +2101,8 @@ async function recomputePlan() {
   }
   pendingOverlapCheck = true;
   await loadWorkspaceData();
+  renderPlannerPanels();
+  renderPlanMetrics();
 }
 
 async function seedDatabase() {
