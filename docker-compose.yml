@@ -1,14 +1,17 @@
+# Имя проекта фиксировано: том recommendation_system_pgdata не зависит от имени папки.
+name: recommendation_system
+
 services:
   db:
     image: postgres:16
     container_name: recsys-postgres
-    restart: unless-stopped
+    restart: "no"
     environment:
       POSTGRES_DB: recsys
       POSTGRES_USER: recsys_user
       POSTGRES_PASSWORD: recsys_pass
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./recsys-backend/internal/storage/createDB.sql:/docker-entrypoint-initdb.d/001_create_schema.sql:ro
@@ -18,7 +21,7 @@ services:
       context: ./recsys-backend
       dockerfile: Dockerfile
     container_name: recsys-api
-    restart: unless-stopped
+    restart: "no"
     depends_on:
       - db
     env_file:
@@ -32,7 +35,7 @@ services:
       DB_USER: "recsys_user"
       DB_PASSWORD: "recsys_pass"
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
 
 volumes:
   pgdata:
